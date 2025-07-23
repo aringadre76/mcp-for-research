@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "AI Visual Feedback Bridge",
+  "version": "0.1.0",
+  "description": "Capture screenshots and DOM for AI coding assistants with comprehensive UI extraction.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content.js", "lib/html2canvas.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+} 

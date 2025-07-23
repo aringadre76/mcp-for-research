@@ -1,0 +1,12 @@
+{
+  "name": "ai-visual-feedback-cursor-extension",
+  "version": "0.1.0",
+  "description": "Cursor IDE extension for AI Visual Feedback Bridge",
+  "main": "extension.js",
+  "scripts": {
+    "start": "node extension.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+} 

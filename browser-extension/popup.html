@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AI Visual Feedback Bridge</title>
+    <style>
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        min-width: 280px; 
+        padding: 16px; 
+        margin: 0;
+        background: #f8f9fa;
+      }
+      
+      .container {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      
+      h1 {
+        font-size: 16px;
+        margin: 0 0 16px 0;
+        color: #1a1a1a;
+        text-align: center;
+      }
+      
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      
+      button {
+        padding: 10px 16px;
+        font-size: 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+      
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        background: #0056b3;
+      }
+      
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+      
+      .btn-secondary:hover {
+        background: #545b62;
+      }
+      
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+      
+      .btn-success:hover {
+        background: #1e7e34;
+      }
+      
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+      
+      .btn-danger:hover {
+        background: #c82333;
+      }
+      
+      .status {
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-top: 8px;
+        display: none;
+      }
+      
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      
+      .status.info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      
+      .toggle-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
+      }
+      
+      .toggle-label {
+        font-size: 13px;
+        color: #495057;
+      }
+      
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+      
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 20px;
+      }
+      
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      
+      input:checked + .slider {
+        background-color: #007bff;
+      }
+      
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      
+      .info-text {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 8px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>AI Visual Feedback Bridge</h1>
+      
+      <div class="toggle-group">
+        <span class="toggle-label">Auto-capture on changes</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="auto-capture-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="button-group">
+        <button id="capture-btn" class="btn-primary">
+          Capture Current Page
+        </button>
+        
+        <button id="extract-btn" class="btn-secondary">
+          Extract UI Structure
+        </button>
+        
+        <button id="start-observing-btn" class="btn-success">
+          Start Auto-capture
+        </button>
+        
+        <button id="stop-observing-btn" class="btn-danger">
+          Stop Auto-capture
+        </button>
+      </div>
+      
+      <div id="status" class="status"></div>
+      
+      <div class="info-text">
+        <strong>What gets captured:</strong><br>
+        Screenshot of the page<br>
+        Page structure & navigation<br>
+        Interactive elements<br>
+        Visible text content<br>
+        Form elements
+      </div>
+    </div>
+    
+    <script src="popup.js"></script>
+  </body>
+</html> 

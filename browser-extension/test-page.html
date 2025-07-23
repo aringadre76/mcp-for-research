@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Visual Feedback Bridge - Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav-links a:hover {
+            color: #007bff;
+        }
+        
+        .nav-links a.active {
+            color: #007bff;
+        }
+        
+        main {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 2rem;
+        }
+        
+        .content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+        
+        h2 {
+            color: #333;
+            margin: 1.5rem 0 1rem 0;
+            font-size: 1.5rem;
+        }
+        
+        h3 {
+            color: #555;
+            margin: 1rem 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+        
+        p {
+            margin-bottom: 1rem;
+            color: #666;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 1rem;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .breadcrumb {
+            display: flex;
+            list-style: none;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb li:not(:last-child)::after {
+            content: " > ";
+            color: #999;
+            margin: 0 0.5rem;
+        }
+        
+        .breadcrumb a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        footer {
+            background: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">AI Bridge Demo</div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Dashboard</a></li>
+                <li><a href="#">Projects</a></li>
+                <li><a href="#">Analytics</a></li>
+                <li><a href="#">Settings</a></li>
+                <li><a href="#">Help</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Dashboard</a></li>
+                <li>Overview</li>
+            </ol>
+        </nav>
+
+        <main>
+            <div class="content">
+                <h1>Dashboard Overview</h1>
+                
+                <div class="alert alert-info">
+                    <strong>Welcome back!</strong> You have 3 new notifications and 2 pending tasks.
+                </div>
+
+                <section>
+                    <h2>Recent Activity</h2>
+                    <p>Here's what's been happening with your projects recently:</p>
+                    
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-number">12</div>
+                            <div class="stat-label">Active Projects</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">89</div>
+                            <div class="stat-label">Tasks Completed</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">$2,450</div>
+                            <div class="stat-label">Revenue This Month</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Quick Actions</h2>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button class="btn btn-primary">Create New Project</button>
+                        <button class="btn btn-secondary">View Reports</button>
+                        <button class="btn btn-success">Export Data</button>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Contact Form</h2>
+                    <form action="/api/contact" method="post">
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <select id="subject" name="subject">
+                                <option value="">Select a subject</option>
+                                <option value="general">General Inquiry</option>
+                                <option value="support">Technical Support</option>
+                                <option value="billing">Billing Question</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="message">Message *</label>
+                            <textarea id="message" name="message" rows="4" placeholder="Enter your message" required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </section>
+            </div>
+
+            <aside class="sidebar">
+                <h3>Quick Links</h3>
+                <div class="card">
+                    <a href="#" style="color: #007bff; text-decoration: none;">View All Projects</a>
+                </div>
+                <div class="card">
+                    <a href="#" style="color: #007bff; text-decoration: none;">Download Reports</a>
+                </div>
+                <div class="card">
+                    <a href="#" style="color: #007bff; text-decoration: none;">Team Settings</a>
+                </div>
+                
+                <h3 style="margin-top: 2rem;">Search</h3>
+                <form action="/search" method="get">
+                    <div class="form-group">
+                        <input type="text" name="q" placeholder="Search projects, tasks...">
+                    </div>
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">Search</button>
+                </form>
+                
+                <div class="alert alert-success" style="margin-top: 1rem;">
+                    <strong>Success!</strong> Your last action was completed successfully.
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 AI Visual Feedback Bridge Demo. All rights reserved.</p>
+            <p>
+                <a href="#" style="color: #007bff; text-decoration: none;">Privacy Policy</a> | 
+                <a href="#" style="color: #007bff; text-decoration: none;">Terms of Service</a> | 
+                <a href="#" style="color: #007bff; text-decoration: none;">Contact Support</a>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Add some interactive behavior for testing
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate form submission
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Form submitted! (Demo only)');
+            });
+            
+            // Add click handlers to buttons
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    if (e.target.type !== 'submit') {
+                        e.preventDefault();
+                        console.log('Button clicked:', e.target.textContent);
+                    }
+                });
+            });
+            
+            // Simulate dynamic content loading
+            setTimeout(() => {
+                const newCard = document.createElement('div');
+                newCard.className = 'card';
+                newCard.innerHTML = '<strong>New!</strong> Dynamic content loaded.';
+                document.querySelector('.sidebar').appendChild(newCard);
+            }, 3000);
+        });
+    </script>
+</body>
+</html> 

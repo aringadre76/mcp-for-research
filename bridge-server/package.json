@@ -1,0 +1,13 @@
+{
+  "name": "ai-visual-feedback-bridge-server",
+  "version": "0.1.0",
+  "description": "Local WebSocket server for AI Visual Feedback Bridge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "express": "^4.18.2"
+  }
+} 
