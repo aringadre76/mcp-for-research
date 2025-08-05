@@ -1,41 +1,163 @@
-# AI Frontend Visual Feedback Bridge
+# 🤖 AI Bridge - Local AI Frontend Analysis
 
-## Project Overview
-A system that allows AI coding assistants (via Cursor IDE) to "see" the live state of a developer's frontend running in the browser. Enables real-time, visual feedback and debugging by bridging the browser and IDE.
+A simple, local AI-powered tool for analyzing frontend applications using your own hardware. No API keys required!
 
-## Directory Structure
+## ✨ Features
 
-- `browser-extension/` — Chrome/Firefox extension for capturing screenshots and DOM snapshots
-- `cursor-extension/` — Cursor IDE extension for receiving and displaying visual/DOM data
-- `bridge-server/` — Local WebSocket server for secure, real-time communication
-- `shared/` — Shared code, types, and utilities
-- `docs/` — Documentation and onboarding guides
+- **🏠 Local AI**: Uses Ollama to run AI models on your RTX 4070 Super
+- **🔍 Frontend Analysis**: Analyze websites for UI bugs, accessibility, performance, etc.
+- **🚀 Simple Setup**: One command to start everything
+- **🛠️ Easy CLI**: Simple command-line interface
+- **📊 Multiple Tasks**: UI bugs, accessibility audits, performance analysis, and more
 
-## Phase 1 MVP: Completed ✓
+## 🚀 Quick Start
 
-The Phase 1 MVP has been implemented with the following features:
+### 1. Install Dependencies
 
-- ✓ Browser extension with screenshot and DOM capture
-- ✓ Bridge server for communication between components
-- ✓ Cursor extension for receiving and displaying data
-- ✓ Manual trigger flow: browser capture → bridge server → cursor extension
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
 
-## Getting Started
+# Install Python dependencies
+pip3 install -r requirements.txt
 
-See the [Setup Guide](docs/setup.md) for instructions on how to install and run the system.
+# Install Playwright browser
+python3 -m playwright install chromium --with-deps
 
-For more information about the architecture, see the [Architecture Document](docs/architecture.md).
+# Download AI model
+ollama pull llama3.2:3b
+```
 
-## Milestones
-- [x] Browser extension: screenshot + DOM capture
-- [x] Cursor extension: receive and display data
-- [x] Local communication bridge
-- [x] Manual trigger integration
-- [ ] AI integration
-- [ ] Security and privacy features
-- [ ] Polished UI/UX
-- [ ] Documentation and onboarding
+### 2. Start the AI Bridge
+
+```bash
+./bin/ai-bridge start
+```
+
+### 3. Test the System
+
+```bash
+./bin/ai-bridge test
+```
+
+### 4. Analyze a Website
+
+```bash
+./bin/ai-bridge analyze https://example.com ui_bug_detection
+```
+
+## 📋 Available Commands
+
+```bash
+./bin/ai-bridge start                     # Start the AI Bridge server
+./bin/ai-bridge stop                      # Stop the AI Bridge server
+./bin/ai-bridge status                    # Show service status
+./bin/ai-bridge test                      # Run system test
+./bin/ai-bridge health                    # Check server health
+./bin/ai-bridge models                    # List available AI models
+./bin/ai-bridge tasks                     # List available analysis tasks
+./bin/ai-bridge analyze <url> [task]      # Analyze a webpage
+```
+
+## 🎯 Analysis Tasks
+
+- **ui_bug_detection** - Find visual bugs and layout issues
+- **accessibility_audit** - WCAG compliance and accessibility issues
+- **performance_analysis** - Performance bottlenecks and optimization
+- **code_quality_review** - Code structure and best practices
+- **ux_review** - User experience evaluation
+- **seo_analysis** - Search engine optimization
+
+## 📁 Project Structure
+
+```
+ai-bridge/
+├── bin/
+│   ├── ai-bridge              # Main CLI command
+│   └── test.js               # System test script
+├── scripts/
+│   ├── start-all.sh          # Start services
+│   ├── stop-all.sh           # Stop services
+│   └── status.sh             # Check status
+├── ai-bridge/
+│   ├── working-server.py     # Main AI Bridge server
+│   ├── cli.py               # Python CLI tool
+│   ├── config.py            # Configuration and tasks
+│   └── test-server.py       # Test server (for development)
+├── logs/                     # Log files
+└── requirements.txt          # Python dependencies
+```
+
+## 🔧 Examples
+
+### Analyze Your Local Development Server
+```bash
+./bin/ai-bridge analyze http://localhost:3000 ui_bug_detection
+```
+
+### Check Accessibility of a Website
+```bash
+./bin/ai-bridge analyze https://github.com accessibility_audit
+```
+
+### Performance Analysis
+```bash
+./bin/ai-bridge analyze https://example.com performance_analysis
+```
+
+### Using the Python CLI Directly
+```bash
+python3 ai-bridge/cli.py --analyze https://example.com --task-type ui_bug_detection
+```
+
+## 🛠️ Troubleshooting
+
+### Server Won't Start
+```bash
+./bin/ai-bridge stop    # Stop any running services
+./bin/ai-bridge start   # Start fresh
+```
+
+### Check What's Running
+```bash
+./bin/ai-bridge status
+```
+
+### View Logs
+```bash
+tail -f logs/ai-bridge.log
+```
+
+### Ollama Issues
+```bash
+ollama --version        # Check Ollama is installed
+ollama list             # Check available models
+ollama pull llama3.2:3b # Download model if missing
+```
+
+## 🚀 Performance
+
+With your RTX 4070 Super:
+- **Analysis Time**: 5-10 seconds per request
+- **Model**: llama3.2:3b (2GB VRAM usage)
+- **Quality**: Detailed AI analysis with actionable recommendations
+
+## 📊 System Requirements
+
+- **GPU**: RTX 4070 Super (or similar with 8GB+ VRAM)
+- **RAM**: 8GB+ recommended
+- **OS**: Linux, macOS, or Windows with WSL
+- **Python**: 3.8+
+- **Node.js**: 14+ (for testing)
+
+## 🎉 Benefits
+
+- **No API Keys**: Everything runs locally
+- **Privacy**: Your data never leaves your machine
+- **Cost-Free**: No usage fees or token limits
+- **Fast**: Optimized for your hardware
+- **Customizable**: Add your own analysis tasks
 
 ---
 
-See `ai-frontend-bridge-plan.md` for the full project plan.
+**Ready to analyze your frontend with local AI power! 🎯**

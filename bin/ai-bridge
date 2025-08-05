@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# AI Bridge CLI - Simple command wrapper
+# Usage: ./bin/ai-bridge [command]
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+case "$1" in
+    "start")
+        echo "🚀 Starting AI Bridge..."
+        $PROJECT_ROOT/scripts/start-all.sh
+        ;;
+    "stop")
+        echo "🛑 Stopping AI Bridge..."
+        $PROJECT_ROOT/scripts/stop-all.sh
+        ;;
+    "status")
+        echo "📊 Checking AI Bridge status..."
+        $PROJECT_ROOT/scripts/status.sh
+        ;;
+    "test")
+        echo "🧪 Testing AI Bridge..."
+        cd $PROJECT_ROOT && node bin/test.js
+        ;;
+    "analyze")
+        if [ -z "$2" ]; then
+            echo "❌ Usage: $0 analyze <url> [task-type]"
+            echo "   Example: $0 analyze https://example.com ui_bug_detection"
+            exit 1
+        fi
+        
+        TASK_TYPE=${3:-ui_bug_detection}
+        echo "🔍 Analyzing $2 with task: $TASK_TYPE"
+        cd $PROJECT_ROOT && python3 ai-bridge/cli.py --analyze "$2" --task-type "$TASK_TYPE"
+        ;;
+    "health")
+        echo "🏥 Checking AI Bridge health..."
+        cd $PROJECT_ROOT && python3 ai-bridge/cli.py --health
+        ;;
+    "models")
+        echo "📦 Listing available models..."
+        cd $PROJECT_ROOT && python3 ai-bridge/cli.py --models
+        ;;
+    "tasks")
+        echo "📋 Listing available tasks..."
+        cd $PROJECT_ROOT && python3 ai-bridge/cli.py --tasks
+        ;;
+    *)
+        echo "🤖 AI Bridge - Local AI Frontend Analysis"
+        echo "======================================="
+        echo ""
+        echo "Usage: $0 [command]"
+        echo ""
+        echo "Commands:"
+        echo "  start                    Start the AI Bridge server"
+        echo "  stop                     Stop the AI Bridge server"  
+        echo "  status                   Show service status"
+        echo "  test                     Run system test"
+        echo "  health                   Check server health"
+        echo "  models                   List available AI models"
+        echo "  tasks                    List available analysis tasks"
+        echo "  analyze <url> [task]     Analyze a webpage"
+        echo ""
+        echo "Examples:"
+        echo "  $0 start"
+        echo "  $0 analyze https://example.com ui_bug_detection"
+        echo "  $0 analyze http://localhost:3000 accessibility_audit"
+        echo "  $0 test"
+        echo ""
+        ;;
+esac
