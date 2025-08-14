@@ -1,163 +1,216 @@
-# 🤖 AI Bridge - Local AI Frontend Analysis
+# 🤖 LocalLook - Autonomous AI Development Cycles
 
-A simple, local AI-powered tool for analyzing frontend applications using your own hardware. No API keys required!
+**Enable Cursor AI to autonomously develop frontend applications through continuous code-test-analyze-improve cycles.**
 
-## ✨ Features
+---
 
-- **🏠 Local AI**: Uses Ollama to run AI models on your RTX 4070 Super
-- **🔍 Frontend Analysis**: Analyze websites for UI bugs, accessibility, performance, etc.
-- **🚀 Simple Setup**: One command to start everything
-- **🛠️ Easy CLI**: Simple command-line interface
-- **📊 Multiple Tasks**: UI bugs, accessibility audits, performance analysis, and more
+## 🌟 The Vision
 
-## 🚀 Quick Start
+**Current Reality**: AI can generate code, but it's blind to the actual running application.
 
-### 1. Install Dependencies
+**Our Solution**: AI that can:
+1. **SEE** the running frontend (DOM structure, visual layout, interactions)  
+2. **TEST** the application (click buttons, fill forms, navigate)
+3. **ANALYZE** the results (detect bugs, UX issues, performance problems)
+4. **CODE** improvements autonomously  
+5. **REPEAT** the cycle until the goal is achieved
 
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
+---
 
-# Install Python dependencies
-pip3 install -r requirements.txt
-
-# Install Playwright browser
-python3 -m playwright install chromium --with-deps
-
-# Download AI model
-ollama pull llama3.2:3b
-```
-
-### 2. Start the AI Bridge
+## 🎯 How It Works
 
 ```bash
-./bin/ai-bridge start
+# You give Cursor a goal:
+"Make this landing page responsive and add a contact form"
+
+# Cursor AI autonomously:
+🧠 Analyzes current frontend state
+💻 Writes React components and CSS  
+🔄 Frontend updates via hot reload
+👁️ Captures new state and tests interactions
+📊 Evaluates progress toward goal
+🔁 Repeats until perfect
+
+# Result: Perfect, tested, responsive landing page with working contact form
 ```
 
-### 3. Test the System
+---
+
+## 🏗️ Architecture
+
+**Cursor-Centric Design**: Instead of competing with Cursor's AI, we enhance it with frontend awareness.
+
+```
+┌─────────────────────────────────────────┐
+│             🏠 Cursor IDE               │
+│  🧠 Cursor AI (Claude/GPT-4)            │
+│  🔌 Extension (streams context)         │
+└─────────────────────────────────────────┘
+                    ↕️ HTTP
+┌─────────────────────────────────────────┐
+│        🌉 Context Bridge (Python)       │
+│  📡 FastAPI  🎭 Playwright  🔍 Analyzer│
+└─────────────────────────────────────────┘
+                    ↕️
+        🌐 Frontend App (localhost:3000)
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Cursor IDE** with AI enabled
+- **Python 3.11+** 
+- **Node.js 16+**
+- **Chrome/Chromium** browser
+
+### Installation
 
 ```bash
-./bin/ai-bridge test
+# Clone and setup
+git clone <repository>
+cd localook
+
+# Install Context Bridge
+cd context-bridge
+pip install -r requirements.txt
+
+# Install Cursor Extension  
+cd ../cursor-extension
+npm install
+npm run compile
 ```
 
-### 4. Analyze a Website
+### Quick Start
 
 ```bash
-./bin/ai-bridge analyze https://example.com ui_bug_detection
+# 1. Start your React app
+npm start  # localhost:3000
+
+# 2. Start Context Bridge
+cd context-bridge
+python main.py
+
+# 3. In Cursor IDE:
+# Cmd+Shift+P → "LocalLook: Start Autonomous Development"
+# Enter goal: "Make this page responsive"
+# Watch AI code, test, and iterate autonomously!
 ```
 
-## 📋 Available Commands
-
-```bash
-./bin/ai-bridge start                     # Start the AI Bridge server
-./bin/ai-bridge stop                      # Stop the AI Bridge server
-./bin/ai-bridge status                    # Show service status
-./bin/ai-bridge test                      # Run system test
-./bin/ai-bridge health                    # Check server health
-./bin/ai-bridge models                    # List available AI models
-./bin/ai-bridge tasks                     # List available analysis tasks
-./bin/ai-bridge analyze <url> [task]      # Analyze a webpage
-```
-
-## 🎯 Analysis Tasks
-
-- **ui_bug_detection** - Find visual bugs and layout issues
-- **accessibility_audit** - WCAG compliance and accessibility issues
-- **performance_analysis** - Performance bottlenecks and optimization
-- **code_quality_review** - Code structure and best practices
-- **ux_review** - User experience evaluation
-- **seo_analysis** - Search engine optimization
+---
 
 ## 📁 Project Structure
 
 ```
-ai-bridge/
-├── bin/
-│   ├── ai-bridge              # Main CLI command
-│   └── test.js               # System test script
-├── scripts/
-│   ├── start-all.sh          # Start services
-│   ├── stop-all.sh           # Stop services
-│   └── status.sh             # Check status
-├── ai-bridge/
-│   ├── working-server.py     # Main AI Bridge server
-│   ├── cli.py               # Python CLI tool
-│   ├── config.py            # Configuration and tasks
-│   └── test-server.py       # Test server (for development)
-├── logs/                     # Log files
-└── requirements.txt          # Python dependencies
+localook/
+├── VISION.md                    # Master plan and vision
+├── README.md                    # This file
+├── context-bridge/              # Python service for browser automation
+│   ├── main.py                 # FastAPI server
+│   ├── capture.py              # DOM + screenshot capture  
+│   ├── interact.py             # Browser automation
+│   └── requirements.txt        # Dependencies
+├── cursor-extension/            # Cursor IDE integration
+│   ├── package.json
+│   ├── src/extension.ts        # Context streaming to Cursor AI
+│   └── tsconfig.json
+└── test-app/                   # Simple React app for testing
+    ├── package.json
+    └── src/
 ```
-
-## 🔧 Examples
-
-### Analyze Your Local Development Server
-```bash
-./bin/ai-bridge analyze http://localhost:3000 ui_bug_detection
-```
-
-### Check Accessibility of a Website
-```bash
-./bin/ai-bridge analyze https://github.com accessibility_audit
-```
-
-### Performance Analysis
-```bash
-./bin/ai-bridge analyze https://example.com performance_analysis
-```
-
-### Using the Python CLI Directly
-```bash
-python3 ai-bridge/cli.py --analyze https://example.com --task-type ui_bug_detection
-```
-
-## 🛠️ Troubleshooting
-
-### Server Won't Start
-```bash
-./bin/ai-bridge stop    # Stop any running services
-./bin/ai-bridge start   # Start fresh
-```
-
-### Check What's Running
-```bash
-./bin/ai-bridge status
-```
-
-### View Logs
-```bash
-tail -f logs/ai-bridge.log
-```
-
-### Ollama Issues
-```bash
-ollama --version        # Check Ollama is installed
-ollama list             # Check available models
-ollama pull llama3.2:3b # Download model if missing
-```
-
-## 🚀 Performance
-
-With your RTX 4070 Super:
-- **Analysis Time**: 5-10 seconds per request
-- **Model**: llama3.2:3b (2GB VRAM usage)
-- **Quality**: Detailed AI analysis with actionable recommendations
-
-## 📊 System Requirements
-
-- **GPU**: RTX 4070 Super (or similar with 8GB+ VRAM)
-- **RAM**: 8GB+ recommended
-- **OS**: Linux, macOS, or Windows with WSL
-- **Python**: 3.8+
-- **Node.js**: 14+ (for testing)
-
-## 🎉 Benefits
-
-- **No API Keys**: Everything runs locally
-- **Privacy**: Your data never leaves your machine
-- **Cost-Free**: No usage fees or token limits
-- **Fast**: Optimized for your hardware
-- **Customizable**: Add your own analysis tasks
 
 ---
 
-**Ready to analyze your frontend with local AI power! 🎯**
+## 🎯 Example Goals
+
+Try these with your Cursor AI:
+
+- **"Make this landing page responsive"**
+- **"Add a contact form with validation"** 
+- **"Implement dark mode toggle"**
+- **"Fix the mobile navigation menu"**
+- **"Improve accessibility compliance"**
+- **"Add loading states to all buttons"**
+
+---
+
+## 🔧 Context Bridge API
+
+The Context Bridge provides rich frontend context to Cursor AI:
+
+```python
+# POST /capture - Get current frontend state
+{
+  "url": "http://localhost:3000",
+  "screenshot": "base64_image_data",
+  "dom": {
+    "elements": [...],
+    "forms": [...], 
+    "buttons": [...],
+    "inputs": [...]
+  },
+  "performance": {
+    "loadTime": 1200,
+    "errors": []
+  },
+  "accessibility": {
+    "score": 85,
+    "issues": [...]
+  }
+}
+```
+
+---
+
+## 🌈 The Autonomous Experience
+
+**Traditional Development:**
+1. Human writes code
+2. Human tests manually
+3. Human describes issues to AI
+4. AI suggests fixes
+5. Human implements fixes
+6. Repeat...
+
+**With LocalLook:**
+1. Human sets goal
+2. AI codes, tests, analyzes, and iterates
+3. AI achieves goal autonomously  
+4. Human reviews final result
+
+**This isn't just faster - it's a completely different paradigm.**
+
+---
+
+## 🎊 Why This Changes Everything
+
+- **Development Speed**: 5-10x faster for common tasks
+- **Code Quality**: Consistent patterns and best practices  
+- **Bug Detection**: Catch issues before human review
+- **Accessibility**: WCAG compliance by default
+- **Responsive Design**: Perfect across all devices
+- **Performance**: Optimized Core Web Vitals
+
+---
+
+## 🛠️ Development Status
+
+**Current Phase**: Foundation Building
+- ✅ Vision and architecture defined
+- 🚧 Context Bridge implementation
+- 🚧 Cursor Extension development  
+- ⏳ End-to-end testing
+- ⏳ Multi-framework support
+
+---
+
+## 📖 Learn More
+
+- **[VISION.md](VISION.md)** - Complete vision and technical details
+- **[Context Bridge API](context-bridge/)** - Browser automation service
+- **[Cursor Extension](cursor-extension/)** - IDE integration
+
+---
+
+**🌟 The future of frontend development: AI that doesn't just write code, but builds complete, tested, polished applications autonomously. 🌟**

@@ -1,8 +1,4 @@
-browser-use[cli]>=0.1.0
-ollama>=0.1.0
-python-dotenv>=1.0.0
-fastapi>=0.104.0
-uvicorn>=0.24.0
-websockets>=12.0
-pydantic>=2.5.0
-aiohttp>=3.9.0 
+# This file is deprecated - requirements are now in context-bridge/requirements.txt
+# Please use the new structure:
+# - context-bridge/requirements.txt for Python dependencies  
+# - cursor-extension/package.json for TypeScript dependencies
