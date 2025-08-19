@@ -1,216 +1,201 @@
-# 🤖 LocalLook - Autonomous AI Development Cycles
+# Scholarly Research MCP Server
 
-**Enable Cursor AI to autonomously develop frontend applications through continuous code-test-analyze-improve cycles.**
+A Model Context Protocol (MCP) server that provides access to academic research papers across multiple sources including PubMed, JSTOR, and Google Scholar.
 
----
+## Features
 
-## 🌟 The Vision
+- **PubMed Integration**: Search and fetch papers using NCBI's E-utilities API
+- **Rate Limiting**: Built-in rate limiting to respect API constraints
+- **Structured Data**: Clean, normalized paper objects with metadata
+- **MCP Protocol**: Standard interface for AI assistants and tools
 
-**Current Reality**: AI can generate code, but it's blind to the actual running application.
+## Installation
 
-**Our Solution**: AI that can:
-1. **SEE** the running frontend (DOM structure, visual layout, interactions)  
-2. **TEST** the application (click buttons, fill forms, navigate)
-3. **ANALYZE** the results (detect bugs, UX issues, performance problems)
-4. **CODE** improvements autonomously  
-5. **REPEAT** the cycle until the goal is achieved
-
----
-
-## 🎯 How It Works
-
+1. Clone the repository:
 ```bash
-# You give Cursor a goal:
-"Make this landing page responsive and add a contact form"
-
-# Cursor AI autonomously:
-🧠 Analyzes current frontend state
-💻 Writes React components and CSS  
-🔄 Frontend updates via hot reload
-👁️ Captures new state and tests interactions
-📊 Evaluates progress toward goal
-🔁 Repeats until perfect
-
-# Result: Perfect, tested, responsive landing page with working contact form
+git clone <repository-url>
+cd scholarly-research-mcp
 ```
 
----
-
-## 🏗️ Architecture
-
-**Cursor-Centric Design**: Instead of competing with Cursor's AI, we enhance it with frontend awareness.
-
-```
-┌─────────────────────────────────────────┐
-│             🏠 Cursor IDE               │
-│  🧠 Cursor AI (Claude/GPT-4)            │
-│  🔌 Extension (streams context)         │
-└─────────────────────────────────────────┘
-                    ↕️ HTTP
-┌─────────────────────────────────────────┐
-│        🌉 Context Bridge (Python)       │
-│  📡 FastAPI  🎭 Playwright  🔍 Analyzer│
-└─────────────────────────────────────────┘
-                    ↕️
-        🌐 Frontend App (localhost:3000)
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Cursor IDE** with AI enabled
-- **Python 3.11+** 
-- **Node.js 16+**
-- **Chrome/Chromium** browser
-
-### Installation
-
+2. Install dependencies:
 ```bash
-# Clone and setup
-git clone <repository>
-cd localook
-
-# Install Context Bridge
-cd context-bridge
-pip install -r requirements.txt
-
-# Install Cursor Extension  
-cd ../cursor-extension
 npm install
-npm run compile
 ```
 
-### Quick Start
-
+3. Build the project:
 ```bash
-# 1. Start your React app
-npm start  # localhost:3000
-
-# 2. Start Context Bridge
-cd context-bridge
-python main.py
-
-# 3. In Cursor IDE:
-# Cmd+Shift+P → "LocalLook: Start Autonomous Development"
-# Enter goal: "Make this page responsive"
-# Watch AI code, test, and iterate autonomously!
+npm run build
 ```
 
----
+## Configuration
 
-## 📁 Project Structure
+### PubMed API Key (Optional)
+While not required, you can get a free API key from NCBI to increase rate limits:
+1. Go to [NCBI Account](https://www.ncbi.nlm.nih.gov/account/)
+2. Create an account and get your API key
+3. Set the environment variable: `export PUBMED_API_KEY=your_key_here`
 
-```
-localook/
-├── VISION.md                    # Master plan and vision
-├── README.md                    # This file
-├── context-bridge/              # Python service for browser automation
-│   ├── main.py                 # FastAPI server
-│   ├── capture.py              # DOM + screenshot capture  
-│   ├── interact.py             # Browser automation
-│   └── requirements.txt        # Dependencies
-├── cursor-extension/            # Cursor IDE integration
-│   ├── package.json
-│   ├── src/extension.ts        # Context streaming to Cursor AI
-│   └── tsconfig.json
-└── test-app/                   # Simple React app for testing
-    ├── package.json
-    └── src/
+## Usage
+
+### Starting the Server
+```bash
+npm start
 ```
 
----
+### Development Mode
+```bash
+npm run dev
+```
 
-## 🎯 Example Goals
+## Available Tools
 
-Try these with your Cursor AI:
+### 1. search_papers
+Search for academic papers with various filters.
 
-- **"Make this landing page responsive"**
-- **"Add a contact form with validation"** 
-- **"Implement dark mode toggle"**
-- **"Fix the mobile navigation menu"**
-- **"Improve accessibility compliance"**
-- **"Add loading states to all buttons"**
+**Parameters:**
+- `query` (required): Search query string
+- `maxResults` (optional): Maximum number of results (default: 20)
+- `startDate` (optional): Start date in YYYY/MM/DD format
+- `endDate` (optional): End date in YYYY/MM/DD format
+- `journal` (optional): Filter by specific journal
+- `author` (optional): Filter by specific author
 
----
-
-## 🔧 Context Bridge API
-
-The Context Bridge provides rich frontend context to Cursor AI:
-
-```python
-# POST /capture - Get current frontend state
+**Example:**
+```json
 {
-  "url": "http://localhost:3000",
-  "screenshot": "base64_image_data",
-  "dom": {
-    "elements": [...],
-    "forms": [...], 
-    "buttons": [...],
-    "inputs": [...]
-  },
-  "performance": {
-    "loadTime": 1200,
-    "errors": []
-  },
-  "accessibility": {
-    "score": 85,
-    "issues": [...]
-  }
+  "query": "machine learning",
+  "maxResults": 10,
+  "startDate": "2020/01/01",
+  "journal": "Nature"
 }
 ```
 
----
+### 2. get_paper_by_id
+Fetch a specific paper by its PubMed ID (PMID).
 
-## 🌈 The Autonomous Experience
+**Parameters:**
+- `pmid` (required): PubMed ID of the paper
 
-**Traditional Development:**
-1. Human writes code
-2. Human tests manually
-3. Human describes issues to AI
-4. AI suggests fixes
-5. Human implements fixes
-6. Repeat...
+**Example:**
+```json
+{
+  "pmid": "12345678"
+}
+```
 
-**With LocalLook:**
-1. Human sets goal
-2. AI codes, tests, analyzes, and iterates
-3. AI achieves goal autonomously  
-4. Human reviews final result
+### 3. get_paper_details
+Get detailed information about a paper including abstract and metadata.
 
-**This isn't just faster - it's a completely different paradigm.**
+**Parameters:**
+- `pmid` (required): PubMed ID of the paper
 
----
+**Example:**
+```json
+{
+  "pmid": "12345678"
+}
+```
 
-## 🎊 Why This Changes Everything
+### 4. get_citation
+Get citation in various formats (BibTeX, EndNote, APA, MLA, RIS).
 
-- **Development Speed**: 5-10x faster for common tasks
-- **Code Quality**: Consistent patterns and best practices  
-- **Bug Detection**: Catch issues before human review
-- **Accessibility**: WCAG compliance by default
-- **Responsive Design**: Perfect across all devices
-- **Performance**: Optimized Core Web Vitals
+**Parameters:**
+- `pmid` (required): PubMed ID of the paper
+- `format` (required): Citation format (`bibtex`, `endnote`, `apa`, `mla`, `ris`)
 
----
+**Example:**
+```json
+{
+  "pmid": "12345678",
+  "format": "bibtex"
+}
+```
 
-## 🛠️ Development Status
+### 5. get_citation_count
+Get the number of times a paper has been cited.
 
-**Current Phase**: Foundation Building
-- ✅ Vision and architecture defined
-- 🚧 Context Bridge implementation
-- 🚧 Cursor Extension development  
-- ⏳ End-to-end testing
-- ⏳ Multi-framework support
+**Parameters:**
+- `pmid` (required): PubMed ID of the paper
 
----
+**Example:**
+```json
+{
+  "pmid": "12345678"
+}
+```
 
-## 📖 Learn More
+## Paper Object Structure
 
-- **[VISION.md](VISION.md)** - Complete vision and technical details
-- **[Context Bridge API](context-bridge/)** - Browser automation service
-- **[Cursor Extension](cursor-extension/)** - IDE integration
+Each paper returned includes:
+- `pmid`: PubMed ID
+- `title`: Paper title
+- `abstract`: Abstract text
+- `authors`: Array of author names
+- `journal`: Journal name
+- `publicationDate`: Publication year
+- `doi`: Digital Object Identifier (if available)
+- `citationCount`: Citation count (if available)
 
----
+## Rate Limiting
 
-**🌟 The future of frontend development: AI that doesn't just write code, but builds complete, tested, polished applications autonomously. 🌟**
+The server implements rate limiting to respect PubMed's API constraints:
+- Minimum 100ms between requests
+- Automatic delays to prevent API abuse
+- Configurable intervals for different API endpoints
+
+## Error Handling
+
+The server provides comprehensive error handling:
+- Network timeout protection (10 seconds)
+- XML parsing error handling
+- Graceful fallbacks for missing data
+- User-friendly error messages
+
+## Development
+
+### Project Structure
+```
+src/
+├── index.ts              # Main server entry point
+├── adapters/
+│   └── pubmed.ts        # PubMed API adapter
+└── tools/
+    └── scholarly-research.ts  # MCP tool implementations
+```
+
+### Adding New Sources
+To add support for new academic sources:
+
+1. Create a new adapter in `src/adapters/`
+2. Implement the source-specific API calls
+3. Add the adapter to the main server
+4. Update the tool implementations
+
+### Testing
+```bash
+npm test
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Roadmap
+
+- [x] Phase 1: PubMed Integration
+- [ ] Phase 2: JSTOR Integration
+- [ ] Phase 3: Google Scholar Integration
+- [ ] Phase 4: Advanced Features
+- [ ] Phase 5: Integration & Testing
+
+## Support
+
+For issues and questions, please open an issue on GitHub.
