@@ -1,4 +1,0 @@
-# This file is deprecated - requirements are now in context-bridge/requirements.txt
-# Please use the new structure:
-# - context-bridge/requirements.txt for Python dependencies  
-# - cursor-extension/package.json for TypeScript dependencies
