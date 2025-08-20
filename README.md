@@ -155,12 +155,25 @@ The server provides comprehensive error handling:
 
 ### Project Structure
 ```
-src/
-├── index.ts              # Main server entry point
-├── adapters/
-│   └── pubmed.ts        # PubMed API adapter
-└── tools/
-    └── scholarly-research.ts  # MCP tool implementations
+├── src/                    # Source code
+│   ├── index.ts           # Main server entry point
+│   └── adapters/
+│       └── pubmed.ts      # PubMed API adapter
+├── tests/                  # Test files
+│   ├── test-pubmed-adapter.js
+│   ├── test-mcp-client.js
+│   ├── test-citations.js
+│   └── interactive-test.js
+├── scripts/                # Utility scripts
+│   ├── cursor-mcp-client.js
+│   └── mcp-config.json
+├── docs/                   # Documentation
+│   ├── CURSOR_SETUP.md
+│   └── PLAN.md
+├── dist/                   # Built output (generated)
+├── package.json            # Dependencies and scripts
+├── tsconfig.json          # TypeScript configuration
+└── README.md              # This file
 ```
 
 ### Adding New Sources

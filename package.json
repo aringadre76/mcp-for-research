@@ -9,12 +9,12 @@
     "dev": "ts-node src/index.ts",
     "prod": "npm run build && npm start",
     "test": "jest",
-    "test:pubmed": "node test-pubmed-adapter.js",
-    "test:mcp": "node test-mcp-client.js",
-    "test:interactive": "node interactive-test.js",
-    "test:citations": "node test-citations.js",
+    "test:pubmed": "node tests/test-pubmed-adapter.js",
+    "test:mcp": "node tests/test-mcp-client.js",
+    "test:interactive": "node tests/interactive-test.js",
+    "test:citations": "node tests/test-citations.js",
     "test:all": "npm run build && npm run test:pubmed && npm run test:mcp && npm run test:citations",
-    "cursor": "node cursor-mcp-client.js"
+    "cursor": "node scripts/cursor-mcp-client.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
