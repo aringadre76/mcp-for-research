@@ -51,7 +51,9 @@
       "src/**/*.{js,ts}",
       "!src/**/*.d.ts"
     ],
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "setupFilesAfterEnv": ["<rootDir>/tests/jest.setup.js"]
   },
   "keywords": [
     "mcp",

@@ -1,67 +1,43 @@
 const { PubMedAdapter } = require('../dist/adapters/pubmed');
 
-async function testContentExtraction() {
-  console.log('🧪 Testing Enhanced PubMed Content Extraction...\n');
+describe('PubMed Content Extraction', () => {
+  let pubmed;
 
-  const pubmed = new PubMedAdapter();
+  beforeAll(() => {
+    pubmed = new PubMedAdapter();
+  });
 
-  try {
-    const testPmid = '12345678';
+  test('should handle fake PMID gracefully', async () => {
+    const testPmid = '12345678'; // Fake PMID
     
-    console.log('1. Testing Full Text Extraction...');
+    // Test full text extraction
     const fullText = await pubmed.getFullTextContent(testPmid);
-    if (fullText) {
-      console.log(`✅ Full text retrieved (${fullText.length} characters)`);
-      console.log(`Preview: ${fullText.substring(0, 200)}...\n`);
-    } else {
-      console.log('⚠️  Full text not available (this is normal for many papers)\n');
-    }
-
-    console.log('2. Testing Section Extraction...');
-    const sections = await pubmed.extractPaperSections(testPmid, 800);
-    if (sections.length > 0) {
-      console.log(`✅ Extracted ${sections.length} sections:`);
-      sections.forEach((section, index) => {
-        console.log(`   ${index + 1}. ${section.title} (${section.content.length} chars)`);
-      });
-      console.log('');
-    } else {
-      console.log('⚠️  No sections extracted (paper may not have full text)\n');
-    }
-
-    console.log('3. Testing Content Search...');
-    const searchResults = await pubmed.searchWithinPaper(testPmid, 'research');
-    if (searchResults.length > 0) {
-      console.log(`✅ Found ${searchResults.length} matching sentences`);
-      console.log(`First result: ${searchResults[0].substring(0, 100)}...\n`);
-    } else {
-      console.log('⚠️  No search results (paper may not have searchable content)\n');
-    }
-
-    console.log('4. Testing with a Real PubMed ID...');
-    console.log('Searching for papers about "machine learning"...');
+    expect(fullText).toBeDefined();
     
-    const papers = await pubmed.searchPapers({ query: 'machine learning', maxResults: 1 });
-    if (papers.length > 0) {
-      const realPmid = papers[0].pmid;
-      console.log(`✅ Found paper: ${papers[0].title}`);
-      console.log(`PMID: ${realPmid}\n`);
+    // Test section extraction
+    const sections = await pubmed.extractPaperSections(testPmid, 800);
+    expect(Array.isArray(sections)).toBe(true);
+    
+    // Test content search
+    const searchResults = await pubmed.searchWithinPaper(testPmid, 'research');
+    expect(Array.isArray(searchResults)).toBe(true);
+  }, 30000);
 
-      console.log('5. Testing Section Extraction on Real Paper...');
-      const realSections = await pubmed.extractPaperSections(realPmid, 500);
-      if (realSections.length > 0) {
-        console.log(`✅ Extracted ${realSections.length} sections from real paper:`);
-        realSections.forEach((section, index) => {
-          console.log(`   ${index + 1}. ${section.title}`);
-        });
-      } else {
-        console.log('⚠️  No sections extracted (paper may not have full text access)');
+  test('should work with real PubMed search', async () => {
+    try {
+      const papers = await pubmed.searchPapers({ query: 'machine learning', maxResults: 1 });
+      if (papers.length > 0) {
+        const realPmid = papers[0].pmid;
+        expect(realPmid).toBeDefined();
+        expect(papers[0].title).toBeDefined();
       }
+    } catch (error) {
+      // Don't fail test for API rate limiting
+      if (error.message && error.message.includes('429')) {
+        console.log('Skipping test due to PubMed API rate limiting');
+        return;
+      }
+      throw error;
     }
-
-  } catch (error) {
-    console.error('❌ Error during testing:', error.message);
-  }
-}
-
-testContentExtraction();
+  }, 30000);
+});
