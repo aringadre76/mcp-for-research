@@ -1,5 +1,5 @@
 {
-  "name": "scholarly-research-mcp",
+  "name": "@aringadre76/scholarly-research-mcp",
   "version": "1.2.3",
   "description": "MCP server for scholarly research across PubMed, JSTOR, and Google Scholar",
   "main": "dist/index.js",
@@ -24,7 +24,7 @@
     "release:major": "npm run version:major && git add package.json && git commit -m \"Bump version\" && git tag v$(node -p \"require('./package.json').version\") && git push origin main --tags",
     "publish:npm": "npm publish",
     "publish:github": "npm publish --registry=https://npm.pkg.github.com",
-    "publish:both": "node scripts/publish-both.js"
+    "publish:both": "npm run publish:npm && npm run publish:github"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
@@ -38,20 +38,6 @@
     "jest": "^29.0.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
-  },
-  "jest": {
-    "testMatch": [
-      "**/tests/**/*.js",
-      "**/tests/**/*.ts"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/"
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.{js,ts}",
-      "!src/**/*.d.ts"
-    ],
-    "testEnvironment": "node"
   },
   "keywords": [
     "mcp",
@@ -68,10 +54,6 @@
     "url": "https://github.com/aringadre76/mcp-for-research.git"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
-  "githubPackages": {
-    "registry": "https://npm.pkg.github.com",
-    "scope": "@aringadre76"
+    "registry": "https://npm.pkg.github.com"
   }
 }
