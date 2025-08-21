@@ -38,3 +38,11 @@ global.testUtils = {
     };
   }
 };
+
+// Add a test to this file so Jest doesn't complain
+describe('Jest Setup', () => {
+  test('should initialize test utilities', () => {
+    expect(global.testUtils).toBeDefined();
+    expect(typeof global.testUtils.createTestWrapper).toBe('function');
+  });
+});
