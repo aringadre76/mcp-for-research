@@ -1,6 +1,6 @@
 {
   "name": "scholarly-research-mcp",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "MCP server for scholarly research across PubMed, JSTOR, and Google Scholar",
   "main": "dist/index.js",
   "scripts": {
@@ -53,7 +53,9 @@
     ],
     "testEnvironment": "node",
     "testTimeout": 30000,
-    "setupFilesAfterEnv": ["<rootDir>/tests/jest.setup.js"]
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/jest.setup.js"
+    ]
   },
   "keywords": [
     "mcp",
