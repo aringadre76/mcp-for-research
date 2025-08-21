@@ -14,7 +14,14 @@
     "test:interactive": "node tests/interactive-test.js",
     "test:citations": "node tests/test-citations.js",
     "test:all": "npm run build && npm run test:pubmed && npm run test:mcp && npm run test:citations",
-    "cursor": "node scripts/cursor-mcp-client.js"
+    "test:content": "node tests/test-content-extraction.js",
+    "cursor": "node scripts/cursor-mcp-client.js",
+    "version:patch": "node scripts/version.js patch",
+    "version:minor": "node scripts/version.js minor",
+    "version:major": "node scripts/version.js major",
+    "release:patch": "npm run version:patch && git add package.json && git commit -m \"Bump version\" && git tag v$(node -p \"require('./package.json').version\") && git push origin main --tags",
+    "release:minor": "npm run version:minor && git add package.json && git commit -m \"Bump version\" && git tag v$(node -p \"require('./package.json').version\") && git push origin main --tags",
+    "release:major": "npm run version:major && git add package.json && git commit -m \"Bump version\" && git tag v$(node -p \"require('./package.json').version\") && git push origin main --tags"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",

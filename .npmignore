@@ -1,0 +1,13 @@
+src/
+tests/
+scripts/
+docs/
+.cursor/
+.git/
+.gitignore
+tsconfig.json
+*.log
+node_modules/
+coverage/
+.DS_Store
+*.tgz

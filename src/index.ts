@@ -106,7 +106,7 @@ async function main() {
 - Authors: ${paper.authors.join(', ')}
 - Journal: ${paper.journal}
 - Publication Date: ${paper.publicationDate}
-- PMID: ${paper.pmid}
+- PMID: ${pmid}
 ${paper.doi ? `- DOI: ${paper.doi}` : ''}
 - Abstract: ${paper.abstract}`
             }
@@ -169,6 +169,281 @@ ${paper.abstract}`
             {
               type: 'text',
               text: `Error fetching paper details: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_full_text',
+    'Get the full text content of a paper for detailed analysis',
+    {
+      pmid: z.string().describe('PubMed ID of the paper'),
+      maxLength: z.number().optional().describe('Maximum length of text to return (default: 5000 characters)')
+    },
+    async ({ pmid, maxLength = 5000 }) => {
+      try {
+        const fullText = await pubmedAdapter.getFullTextContent(pmid);
+        
+        if (!fullText) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Could not retrieve full text for PMID: ${pmid}. This might be due to access restrictions or the paper not being available in full text.`
+              }
+            ]
+          };
+        }
+
+        const truncatedText = fullText.length > maxLength 
+          ? fullText.substring(0, maxLength) + '...'
+          : fullText;
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Full Text Content (PMID: ${pmid})**
+${truncatedText}
+
+${fullText.length > maxLength ? `\n*Note: Text truncated to ${maxLength} characters. Full text is ${fullText.length} characters long.*` : ''}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error fetching full text: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'extract_paper_sections',
+    'Extract and organize the main sections of a paper (Introduction, Methods, Results, etc.)',
+    {
+      pmid: z.string().describe('PubMed ID of the paper'),
+      maxSectionLength: z.number().optional().describe('Maximum length of each section (default: 1000 characters)')
+    },
+    async ({ pmid, maxSectionLength = 1000 }) => {
+      try {
+        const sections = await pubmedAdapter.extractPaperSections(pmid, maxSectionLength);
+        
+        if (sections.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Could not extract sections for PMID: ${pmid}. This might be due to the paper not being available in full text or having an unusual structure.`
+              }
+            ]
+          };
+        }
+
+        const sectionsText = sections.map((section, index) => {
+          const levelIndicator = section.level === 1 ? '#' : '##';
+          return `${levelIndicator} ${section.title}
+${section.content}
+
+`;
+        }).join('');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Paper Sections (PMID: ${pmid})**
+
+${sectionsText}
+
+*Found ${sections.length} sections. Each section is limited to ${maxSectionLength} characters for readability.*`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error extracting paper sections: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'search_within_paper',
+    'Search for specific terms, quotes, or evidence within a paper',
+    {
+      pmid: z.string().describe('PubMed ID of the paper'),
+      searchTerm: z.string().describe('Term or phrase to search for within the paper'),
+      maxResults: z.number().optional().describe('Maximum number of matching sentences to return (default: 10)')
+    },
+    async ({ pmid, searchTerm, maxResults = 10 }) => {
+      try {
+        const matchingSentences = await pubmedAdapter.searchWithinPaper(pmid, searchTerm);
+        
+        if (matchingSentences.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No matches found for "${searchTerm}" in paper PMID: ${pmid}. Try using different search terms or check if the paper contains the content you're looking for.`
+              }
+            ]
+          };
+        }
+
+        const resultsText = matchingSentences
+          .slice(0, maxResults)
+          .map((sentence, index) => `${index + 1}. ${sentence}`)
+          .join('\n\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Search Results for "${searchTerm}" in PMID: ${pmid}**
+
+Found ${matchingSentences.length} matching sentences:
+
+${resultsText}
+
+${matchingSentences.length > maxResults ? `\n*Showing first ${maxResults} results. Total matches: ${matchingSentences.length}*` : ''}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error searching within paper: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_evidence_quotes',
+    'Extract specific quotes and evidence from a paper for use in essays or research',
+    {
+      pmid: z.string().describe('PubMed ID of the paper'),
+      evidenceType: z.enum(['quotes', 'statistics', 'findings', 'conclusions', 'all']).optional().describe('Type of evidence to extract (default: all)'),
+      maxQuotes: z.number().optional().describe('Maximum number of quotes to return (default: 15)')
+    },
+    async ({ pmid, evidenceType = 'all', maxQuotes = 15 }) => {
+      try {
+        const fullText = await pubmedAdapter.getFullTextContent(pmid);
+        
+        if (!fullText) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Could not retrieve full text for PMID: ${pmid}. This might be due to access restrictions or the paper not being available in full text.`
+              }
+            ]
+          };
+        }
+
+        const sentences = fullText.split(/[.!?]+/).filter(sentence => sentence.trim().length > 20);
+        let evidenceSentences: string[] = [];
+
+        if (evidenceType === 'all' || evidenceType === 'quotes') {
+          const quotePatterns = [
+            /"[^"]+"/g,
+            /'[^']+'/g,
+            /\([^)]+\)/g
+          ];
+          
+          sentences.forEach(sentence => {
+            if (quotePatterns.some(pattern => pattern.test(sentence))) {
+              evidenceSentences.push(sentence.trim());
+            }
+          });
+        }
+
+        if (evidenceType === 'all' || evidenceType === 'statistics') {
+          const statPatterns = [
+            /\d+%/, /\d+\.\d+%/, /\d+ out of \d+/, /\d+ of \d+/, /\d+ patients/, /\d+ participants/
+          ];
+          
+          sentences.forEach(sentence => {
+            if (statPatterns.some(pattern => pattern.test(sentence))) {
+              evidenceSentences.push(sentence.trim());
+            }
+          });
+        }
+
+        if (evidenceType === 'all' || evidenceType === 'findings') {
+          const findingKeywords = ['found', 'discovered', 'revealed', 'showed', 'demonstrated', 'indicated', 'suggested'];
+          
+          sentences.forEach(sentence => {
+            if (findingKeywords.some(keyword => sentence.toLowerCase().includes(keyword))) {
+              evidenceSentences.push(sentence.trim());
+            }
+          });
+        }
+
+        if (evidenceType === 'all' || evidenceType === 'conclusions') {
+          const conclusionKeywords = ['conclude', 'conclusion', 'therefore', 'thus', 'hence', 'consequently'];
+          
+          sentences.forEach(sentence => {
+            if (conclusionKeywords.some(keyword => sentence.toLowerCase().includes(keyword))) {
+              evidenceSentences.push(sentence.trim());
+            }
+          });
+        }
+
+        evidenceSentences = [...new Set(evidenceSentences)].slice(0, maxQuotes);
+
+        if (evidenceSentences.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No evidence of type "${evidenceType}" found in paper PMID: ${pmid}. Try using a different evidence type or check if the paper contains the content you're looking for.`
+              }
+            ]
+          };
+        }
+
+        const evidenceText = evidenceSentences
+          .map((sentence, index) => `${index + 1}. ${sentence}`)
+          .join('\n\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Evidence and Quotes from PMID: ${pmid}**
+Type: ${evidenceType}
+
+${evidenceText}
+
+*Found ${evidenceSentences.length} pieces of evidence. Use these quotes and findings to support your research or essays.*`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error extracting evidence: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
           ]
         };

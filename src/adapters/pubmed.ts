@@ -10,6 +10,15 @@ export interface PubMedPaper {
   publicationDate: string;
   doi?: string;
   citationCount?: number;
+  fullText?: string;
+  sections?: PaperSection[];
+}
+
+export interface PaperSection {
+  title: string;
+  content: string;
+  level: number;
+  subsections?: PaperSection[];
 }
 
 export interface PubMedSearchParams {
@@ -19,6 +28,13 @@ export interface PubMedSearchParams {
   endDate?: string;
   journal?: string;
   author?: string;
+}
+
+export interface TextExtractionParams {
+  pmid: string;
+  includeFullText?: boolean;
+  extractSections?: boolean;
+  maxSectionLength?: number;
 }
 
 export class PubMedAdapter {
@@ -129,13 +145,11 @@ export class PubMedAdapter {
           const medline = article.MedlineCitation?.[0];
           const pubmedData = article.PubmedData?.[0];
           
-          // Handle PMID - it can be either a string or an object with _ property
           let pmid = '';
           if (medline?.PMID?.[0]) {
             pmid = typeof medline.PMID[0] === 'string' ? medline.PMID[0] : medline.PMID[0]._ || '';
           }
           
-          // Handle title
           let title = '';
           if (medline?.Article?.[0]?.ArticleTitle?.[0]) {
             title = typeof medline.Article[0].ArticleTitle[0] === 'string' 
@@ -143,7 +157,6 @@ export class PubMedAdapter {
               : medline.Article[0].ArticleTitle[0]._ || '';
           }
           
-          // Handle abstract - AbstractText can be an array or single element
           let abstract = '';
           if (medline?.Article?.[0]?.Abstract?.[0]?.AbstractText) {
             const abstractText = medline.Article[0].Abstract[0].AbstractText;
@@ -156,7 +169,6 @@ export class PubMedAdapter {
             }
           }
           
-          // Handle authors
           let authors: string[] = [];
           if (medline?.Article?.[0]?.AuthorList?.[0]?.Author) {
             const authorList = medline.Article[0].AuthorList[0].Author;
@@ -170,7 +182,6 @@ export class PubMedAdapter {
             }
           }
           
-          // Handle journal
           let journal = '';
           if (medline?.MedlineJournalInfo?.[0]?.MedlineTA?.[0]) {
             journal = typeof medline.MedlineJournalInfo[0].MedlineTA[0] === 'string'
@@ -178,7 +189,6 @@ export class PubMedAdapter {
               : medline.MedlineJournalInfo[0].MedlineTA[0]._ || '';
           }
           
-          // Handle publication date
           let publicationDate = '';
           if (medline?.Article?.[0]?.Journal?.[0]?.JournalIssue?.[0]?.PubDate?.[0]?.Year?.[0]) {
             publicationDate = typeof medline.Article[0].Journal[0].JournalIssue[0].PubDate[0].Year[0] === 'string'
@@ -186,7 +196,6 @@ export class PubMedAdapter {
               : medline.Article[0].Journal[0].JournalIssue[0].PubDate[0].Year[0]._ || '';
           }
           
-          // Handle DOI
           let doi: string | undefined = undefined;
           if (pubmedData?.ArticleIdList?.[0]?.ArticleId) {
             const articleIds = pubmedData.ArticleIdList[0].ArticleId;
@@ -219,6 +228,144 @@ export class PubMedAdapter {
     return papers.length > 0 ? papers[0] : null;
   }
 
+  async getFullTextContent(pmid: string): Promise<string | null> {
+    try {
+      const paper = await this.getPaperById(pmid);
+      if (!paper) return null;
+
+      let fullText = paper.abstract || '';
+
+      if (paper.doi) {
+        try {
+          const fullTextResponse = await this.fetchFullTextFromDOI(paper.doi);
+          if (fullTextResponse) {
+            fullText = fullTextResponse;
+          }
+        } catch (error) {
+          console.warn(`Could not fetch full text from DOI ${paper.doi}:`, error);
+        }
+      }
+
+      return fullText;
+    } catch (error) {
+      console.error('Error fetching full text content:', error);
+      return null;
+    }
+  }
+
+  private async fetchFullTextFromDOI(doi: string): Promise<string | null> {
+    try {
+      const response = await axios.get(`https://doi.org/${doi}`, {
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; ScholarlyResearchMCP/1.0)'
+        }
+      });
+
+      if (response.data) {
+        return this.extractTextFromHTML(response.data);
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private extractTextFromHTML(html: string): string {
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    return text;
+  }
+
+  async extractPaperSections(pmid: string, maxSectionLength: number = 1000): Promise<PaperSection[]> {
+    try {
+      const fullText = await this.getFullTextContent(pmid);
+      if (!fullText) return [];
+
+      const sections: PaperSection[] = [];
+      const lines = fullText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+      let currentSection: PaperSection | null = null;
+      let currentContent: string[] = [];
+
+      for (const line of lines) {
+        if (this.isSectionHeader(line)) {
+          if (currentSection) {
+            currentSection.content = currentContent.join(' ').substring(0, maxSectionLength);
+            sections.push(currentSection);
+          }
+
+          currentSection = {
+            title: line,
+            content: '',
+            level: this.getSectionLevel(line)
+          };
+          currentContent = [];
+        } else if (currentSection) {
+          currentContent.push(line);
+        }
+      }
+
+      if (currentSection) {
+        currentSection.content = currentContent.join(' ').substring(0, maxSectionLength);
+        sections.push(currentSection);
+      }
+
+      return sections;
+    } catch (error) {
+      console.error('Error extracting paper sections:', error);
+      return [];
+    }
+  }
+
+  private isSectionHeader(line: string): boolean {
+    const headerPatterns = [
+      /^[A-Z][A-Z\s]+$/,
+      /^[0-9]+\.\s+[A-Z]/,
+      /^[A-Z][a-z]+\s+[A-Z]/,
+      /^Abstract$/i,
+      /^Introduction$/i,
+      /^Methods?$/i,
+      /^Results?$/i,
+      /^Discussion$/i,
+      /^Conclusion$/i,
+      /^References?$/i
+    ];
+
+    return headerPatterns.some(pattern => pattern.test(line));
+  }
+
+  private getSectionLevel(title: string): number {
+    if (/^[0-9]+\.\s+/.test(title)) return 2;
+    if (/^[A-Z][A-Z\s]+$/.test(title)) return 1;
+    return 1;
+  }
+
+  async searchWithinPaper(pmid: string, searchTerm: string): Promise<string[]> {
+    try {
+      const fullText = await this.getFullTextContent(pmid);
+      if (!fullText) return [];
+
+      const searchTermLower = searchTerm.toLowerCase();
+      const sentences = fullText.split(/[.!?]+/).filter(sentence => 
+        sentence.toLowerCase().includes(searchTermLower)
+      );
+
+      return sentences
+        .map(sentence => sentence.trim())
+        .filter(sentence => sentence.length > 20 && sentence.length < 500)
+        .slice(0, 10);
+    } catch (error) {
+      console.error('Error searching within paper:', error);
+      return [];
+    }
+  }
+
   async getCitationCount(pmid: string): Promise<number | null> {
     try {
       const fetchParams = {
@@ -243,11 +390,9 @@ export class PubMedAdapter {
             return;
           }
 
-          // Try to get citation count from various sources
           const medline = article.MedlineCitation?.[0];
           const pubmedData = article.PubmedData?.[0];
           
-          // Check for citation count in ArticleIdList
           if (pubmedData?.ArticleIdList?.[0]?.ArticleId) {
             const articleIds = pubmedData.ArticleIdList[0].ArticleId;
             if (Array.isArray(articleIds)) {
@@ -263,7 +408,6 @@ export class PubMedAdapter {
             }
           }
 
-          // If no citation count found, return null
           resolve(null);
         });
       });
