@@ -6,7 +6,7 @@ import { z } from 'zod';
 async function main() {
   const mcpServer = new McpServer({
     name: 'scholarly-research-mcp',
-    version: '1.0.0',
+    version: '1.2.0',
   });
 
   const pubmedAdapter = new PubMedAdapter();
@@ -46,12 +46,14 @@ async function main() {
 
         const resultsText = papers.map((paper, index) => {
           const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown authors';
+          const pmcInfo = paper.pmcid ? `\n   - PMC ID: ${paper.pmcid} (Full text likely available)` : '';
+          const doiInfo = paper.doi ? `\n   - DOI: ${paper.doi}` : '';
+          
           return `${index + 1}. **${paper.title}**
    - Authors: ${authors}
    - Journal: ${paper.journal}
    - Publication Date: ${paper.publicationDate}
-   - PMID: ${paper.pmid}
-   ${paper.doi ? `- DOI: ${paper.doi}` : ''}
+   - PMID: ${paper.pmid}${pmcInfo}${doiInfo}
    ${paper.abstract ? `- Abstract: ${paper.abstract.substring(0, 200)}...` : ''}
 `;
         }).join('\n');
@@ -70,6 +72,129 @@ async function main() {
             {
               type: 'text',
               text: `Error searching papers: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_paper_by_pmcid',
+    'Fetch a specific paper by its PubMed Central ID (PMCID) for full text access',
+    {
+      pmcid: z.string().describe('PubMed Central ID of the paper (e.g., PMC8353807)')
+    },
+    async ({ pmcid }) => {
+      try {
+        const paper = await pubmedAdapter.getPaperByPMCID(pmcid);
+        
+        if (!paper) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No paper found with PMC ID: ${pmcid}`
+              }
+            ]
+          };
+        }
+
+        const pmcUrl = paper.pmcFullTextUrl || `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcid}/`;
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**${paper.title}**
+- Authors: ${paper.authors.join(', ')}
+- Journal: ${paper.journal}
+- Publication Date: ${paper.publicationDate}
+- PMID: ${paper.pmid}
+- PMC ID: ${pmcid}
+- Full Text URL: ${pmcUrl}
+
+**Abstract**
+${paper.abstract}
+
+**Full Text Access**
+This paper is available in PubMed Central (PMC), which typically provides free access to the complete article. Use the URL above to access the full text, or use the \`get_full_text\` tool to extract the content directly.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error fetching paper by PMC ID: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_pmc_access_info',
+    'Get detailed PMC access information and URLs for a paper',
+    {
+      pmcid: z.string().describe('PubMed Central ID of the paper (e.g., PMC8353807)')
+    },
+    async ({ pmcid }) => {
+      try {
+        const paper = await pubmedAdapter.getPaperByPMCID(pmcid);
+        
+        if (!paper) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No paper found with PMC ID: ${pmcid}`
+              }
+            ]
+          };
+        }
+
+        const cleanPmcid = pmcid.replace(/^PMC/, '');
+        const baseUrl = `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${cleanPmcid}`;
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**PMC Access Information for ${pmcid}**
+
+**Paper Details**
+Title: ${paper.title}
+Authors: ${paper.authors.join(', ')}
+Journal: ${paper.journal}
+Publication Date: ${paper.publicationDate}
+PMID: ${paper.pmid}
+DOI: ${paper.doi || 'None'}
+
+**PMC Access URLs**
+- **Main Article Page**: ${baseUrl}/
+- **PDF Version**: ${baseUrl}/pdf/
+- **XML Version**: ${baseUrl}/xml/
+- **Full Text**: ${baseUrl}/fulltext/
+
+**How to Access Full Text**
+1. **Direct Browser Access**: Visit ${baseUrl}/ in your web browser
+2. **PDF Download**: Click the PDF link on the PMC page
+3. **Programmatic Access**: Use the \`get_full_text\` tool with PMID: ${paper.pmid}
+4. **Alternative Sources**: Check if the paper has a DOI for additional access
+
+**Note**: Some PMC papers may have limited full text access depending on their age and publisher agreements. The abstract is always available.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error fetching PMC access info: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
           ]
         };
@@ -98,6 +223,9 @@ async function main() {
           };
         }
 
+        const pmcInfo = paper.pmcid ? `\n- PMC ID: ${paper.pmcid} (Full text likely available)` : '';
+        const doiInfo = paper.doi ? `\n- DOI: ${paper.doi}` : '';
+
         return {
           content: [
             {
@@ -106,8 +234,7 @@ async function main() {
 - Authors: ${paper.authors.join(', ')}
 - Journal: ${paper.journal}
 - Publication Date: ${paper.publicationDate}
-- PMID: ${pmid}
-${paper.doi ? `- DOI: ${paper.doi}` : ''}
+- PMID: ${pmid}${pmcInfo}${doiInfo}
 - Abstract: ${paper.abstract}`
             }
           ]
@@ -146,6 +273,9 @@ ${paper.doi ? `- DOI: ${paper.doi}` : ''}
           };
         }
 
+        const pmcInfo = paper.pmcid ? `\nPMC ID: ${paper.pmcid} (Full text likely available)` : '';
+        const doiInfo = paper.doi ? `\nDOI: ${paper.doi}` : '';
+
         return {
           content: [
             {
@@ -155,8 +285,7 @@ Title: ${paper.title}
 Authors: ${paper.authors.join(', ')}
 Journal: ${paper.journal}
 Publication Date: ${paper.publicationDate}
-PMID: ${pmid}
-${paper.doi ? `DOI: ${paper.doi}` : ''}
+PMID: ${pmid}${pmcInfo}${doiInfo}
 
 **Abstract**
 ${paper.abstract}`
