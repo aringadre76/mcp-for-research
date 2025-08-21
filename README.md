@@ -2,16 +2,26 @@
 
 A Model Context Protocol (MCP) server that provides access to academic research papers across multiple sources including PubMed, JSTOR, and Google Scholar. **Now with enhanced capabilities for reading full text content, extracting paper sections, and finding specific evidence and quotes for research and essays.**
 
+## 🆕 What's New in v1.3.0
+
+- **Fixed PMC URL Issues**: Corrected PubMed Central URL handling for reliable full-text access
+- **Enhanced Full Text Retrieval**: Increased default text length from 5,000 to 50,000 characters
+- **Improved Section Extraction**: Better algorithms for identifying and organizing paper sections
+- **Dual URL Support**: Now supports both PMCID and PMID formats for accessing papers
+- **Better Content Processing**: Enhanced HTML cleaning and text extraction from PMC sources
+
 ## Features
 
 - **PubMed Integration**: Search and fetch papers using NCBI's E-utilities API
-- **Full Text Extraction**: Access complete paper content when available
+- **Full Text Extraction**: Access complete paper content when available (up to 50,000+ characters)
 - **Section Analysis**: Extract and organize paper sections (Introduction, Methods, Results, etc.)
 - **Evidence Mining**: Find specific quotes, statistics, findings, and conclusions
 - **Content Search**: Search within papers for specific terms and phrases
 - **Rate Limiting**: Built-in rate limiting to respect API constraints
 - **Structured Data**: Clean, normalized paper objects with metadata
 - **MCP Protocol**: Standard interface for AI assistants and tools
+- **PMC Integration**: Direct access to PubMed Central full-text articles
+- **Dual Identifier Support**: Works with both PMID and PMCID identifiers
 
 ## Installation
 
@@ -95,7 +105,7 @@ Get the complete text content of a paper for detailed analysis.
 
 **Parameters:**
 - `pmid` (required): PubMed ID of the paper
-- `maxLength` (optional): Maximum length of text to return (default: 5000 characters)
+- `maxLength` (optional): Maximum length of text to return (default: 50000 characters)
 
 **Example:**
 ```json
@@ -183,10 +193,48 @@ Each paper returned includes:
 - `fullText`: Full text content (when available)
 - `sections`: Organized paper sections (when extracted)
 
+## 🚀 Enhanced Full Text Access
+
+The server now provides significantly improved access to full-text papers:
+
+### **Default Text Length**
+- **Previous**: Limited to 5,000 characters by default
+- **Current**: Now provides up to 50,000 characters by default
+- **Customizable**: Can be set to any length up to the full paper content
+
+### **URL Format Support**
+- **PMCID Format**: `https://pmc.ncbi.nlm.nih.gov/articles/PMC{pmcid}/`
+- **PMID Format**: `https://pmc.ncbi.nlm.nih.gov/articles/pmid/{pmid}/`
+- **Fallback Logic**: Automatically tries multiple access methods for maximum success rate
+
+### **Content Quality Improvements**
+- Better HTML tag removal and text cleaning
+- Improved section detection algorithms
+- Enhanced error handling and fallback mechanisms
+
 ## Paper Section Structure
 
 When extracting sections, each section includes:
 - `title`: Section title (e.g., "Introduction", "Methods", "Results")
+
+## 🔧 Troubleshooting
+
+### **Full Text Access Issues**
+If you're having trouble accessing full text content:
+
+1. **Check Paper Availability**: Ensure the paper has a PMCID (PubMed Central ID)
+2. **Use PMID Fallback**: The system automatically tries both PMCID and PMID formats
+3. **Increase maxLength**: Set a higher `maxLength` parameter for longer content
+4. **Check PMC Status**: Verify the paper is available in PubMed Central
+
+### **Section Extraction**
+- **No Sections Found**: Some papers may not have clearly defined sections
+- **Use Search Instead**: Try `search_within_paper` for specific content
+- **Adjust Section Length**: Increase `maxSectionLength` for more detailed sections
+
+### **Rate Limiting**
+- **429 Errors**: PubMed API rate limits are automatically handled
+- **API Key**: Consider adding a PubMed API key for higher rate limits
 - `content`: Section content text
 - `level`: Section hierarchy level (1 for main sections, 2 for subsections)
 - `subsections`: Nested subsections (if any)
@@ -279,16 +327,32 @@ npm test
 
 MIT License - see LICENSE file for details.
 
+## 📋 Changelog
+
+### v1.3.0 (Latest)
+- **Fixed PMC URL Issues**: Corrected base URL from `www.ncbi.nlm.nih.gov/pmc` to `pmc.ncbi.nlm.nih.gov`
+- **Added PMID-based URL Support**: Now supports both PMCID and PMID formats for full text access
+- **Increased Default Text Length**: Default `maxLength` increased from 5,000 to 50,000 characters
+- **Enhanced Content Processing**: Better HTML cleaning and text extraction from PMC sources
+- **Improved Section Detection**: Better algorithms for identifying and organizing paper sections
+- **Fallback Logic**: Added automatic fallback between PMCID and PMID access methods
+
+### v1.2.3
+- Initial release with basic PubMed integration
+- Full text extraction capabilities
+- Section analysis and evidence mining
+
 ## Roadmap
 
 - [x] Phase 1: PubMed Integration
 - [x] Phase 2: Full Text Extraction
 - [x] Phase 3: Section Analysis
 - [x] Phase 4: Evidence Mining
-- [ ] Phase 5: JSTOR Integration
-- [ ] Phase 6: Google Scholar Integration
-- [ ] Phase 7: Advanced Features
-- [ ] Phase 8: Integration & Testing
+- [x] Phase 5: Enhanced PMC Access & URL Handling
+- [ ] Phase 6: JSTOR Integration
+- [ ] Phase 7: Google Scholar Integration
+- [ ] Phase 8: Advanced Features
+- [ ] Phase 9: Integration & Testing
 
 ## Support
 

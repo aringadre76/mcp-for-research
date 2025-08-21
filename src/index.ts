@@ -310,9 +310,9 @@ ${paper.abstract}`
     'Get the full text content of a paper for detailed analysis',
     {
       pmid: z.string().describe('PubMed ID of the paper'),
-      maxLength: z.number().optional().describe('Maximum length of text to return (default: 5000 characters)')
+      maxLength: z.number().optional().describe('Maximum length of text to return (default: 50000 characters)')
     },
-    async ({ pmid, maxLength = 5000 }) => {
+    async ({ pmid, maxLength = 50000 }) => {
       try {
         const fullText = await pubmedAdapter.getFullTextContent(pmid);
         

@@ -41,7 +41,7 @@ export interface TextExtractionParams {
 
 export class PubMedAdapter {
   private baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
-  private pmcBaseUrl = 'https://www.ncbi.nlm.nih.gov/pmc';
+  private pmcBaseUrl = 'https://pmc.ncbi.nlm.nih.gov';
   private apiKey?: string;
   private lastRequestTime = 0;
   private readonly minRequestInterval = 100;
@@ -266,6 +266,20 @@ export class PubMedAdapter {
         console.log(`No PMC ID found for paper: ${paper.pmid}`);
       }
 
+      // Try PMC with PMID as fallback
+      try {
+        console.log(`Attempting to fetch full text from PMC using PMID: ${paper.pmid}`);
+        const pmcText = await this.fetchFullTextFromPMC(paper.pmid);
+        if (pmcText && pmcText.length > fullText.length) {
+          console.log(`✅ Successfully fetched ${pmcText.length} characters from PMC using PMID`);
+          return pmcText;
+        } else {
+          console.log(`PMC text length using PMID: ${pmcText ? pmcText.length : 0}, not longer than abstract`);
+        }
+      } catch (error) {
+        console.warn(`Could not fetch full text from PMC using PMID ${paper.pmid}:`, error);
+      }
+
       // Try DOI as fallback
       if (paper.doi) {
         try {
@@ -384,6 +398,29 @@ export class PubMedAdapter {
         }
               } catch (error) {
           console.log(`Method 4 failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+      // Method 5: Try the PMID-based URL format
+      try {
+        const pmidUrl = `${this.pmcBaseUrl}/articles/pmid/${cleanPmcid}/`;
+        console.log(`Method 5: Trying PMID-based URL: ${pmidUrl}`);
+        
+        const response = await axios.get(pmidUrl, {
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; ScholarlyResearchMCP/1.0)'
+          }
+        });
+
+        if (response.data) {
+          const extractedText = this.extractTextFromPMC(response.data);
+          if (extractedText && extractedText.length > 1000) {
+            console.log(`✅ Method 5 successful: ${extractedText.length} characters`);
+            return extractedText;
+          }
+        }
+              } catch (error) {
+          console.log(`Method 5 failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
       console.log(`❌ All PMC methods failed for PMC${cleanPmcid}`);
@@ -535,8 +572,14 @@ export class PubMedAdapter {
       const fullText = await this.getFullTextContent(pmid, pmcid);
       if (!fullText) return [];
 
+      // Clean HTML tags and normalize text
+      const cleanText = fullText
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
       const sections: PaperSection[] = [];
-      const lines = fullText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      const lines = cleanText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
       let currentSection: PaperSection | null = null;
       let currentContent: string[] = [];
@@ -562,6 +605,11 @@ export class PubMedAdapter {
       if (currentSection) {
         currentSection.content = currentContent.join(' ').substring(0, maxSectionLength);
         sections.push(currentSection);
+      }
+
+      // If no sections found, try to extract from common patterns
+      if (sections.length === 0) {
+        return this.extractSectionsFromPatterns(cleanText, maxSectionLength);
       }
 
       return sections;
@@ -592,6 +640,90 @@ export class PubMedAdapter {
     if (/^[0-9]+\.\s+/.test(title)) return 2;
     if (/^[A-Z][A-Z\s]+$/.test(title)) return 1;
     return 1;
+  }
+
+  private extractSectionsFromPatterns(text: string, maxSectionLength: number): PaperSection[] {
+    const sections: PaperSection[] = [];
+    
+    // Common section patterns with improved matching
+    const sectionPatterns = [
+      { pattern: /\bAbstract\b/i, title: 'Abstract' },
+      { pattern: /\b1\.\s*Introduction\b/i, title: '1. Introduction' },
+      { pattern: /\bIntroduction\b/i, title: 'Introduction' },
+      { pattern: /\b2\.\s*Depth Estimation/i, title: '2. Depth Estimation' },
+      { pattern: /\b3\.\s*Datasets?\b/i, title: '3. Datasets' },
+      { pattern: /\bDatasets?\b/i, title: 'Datasets' },
+      { pattern: /\b4\.\s*Evaluation/i, title: '4. Evaluation' },
+      { pattern: /\bEvaluation Metrics?\b/i, title: 'Evaluation Metrics' },
+      { pattern: /\b5\.\s*Input Data/i, title: '5. Input Data Shapes' },
+      { pattern: /\b6\.\s*Mde/i, title: '6. MDE Training Manners' },
+      { pattern: /\b7\.\s*Discussion\b/i, title: '7. Discussion' },
+      { pattern: /\bDiscussion\b/i, title: 'Discussion' },
+      { pattern: /\b8\.\s*Conclusion/i, title: '8. Conclusion' },
+      { pattern: /\bConclusion\b/i, title: 'Conclusion' },
+      { pattern: /\bMethods?\b/i, title: 'Methods' },
+      { pattern: /\bResults?\b/i, title: 'Results' },
+      { pattern: /\bReferences?\b/i, title: 'References' },
+      { pattern: /\bBackground\b/i, title: 'Background' },
+      { pattern: /\bRelated Work\b/i, title: 'Related Work' },
+      { pattern: /\bSupervised Learning\b/i, title: 'Supervised Learning' },
+      { pattern: /\bUnsupervised Learning\b/i, title: 'Unsupervised Learning' },
+      { pattern: /\bSemi-Supervised Learning\b/i, title: 'Semi-Supervised Learning' }
+    ];
+
+    const foundSections: { index: number; title: string; match: RegExpMatchArray }[] = [];
+
+    // Find all section matches
+    for (const section of sectionPatterns) {
+      const match = text.match(section.pattern);
+      if (match && match.index !== undefined) {
+        foundSections.push({
+          index: match.index,
+          title: section.title,
+          match: match
+        });
+      }
+    }
+
+    // Sort sections by their position in the text
+    foundSections.sort((a, b) => a.index - b.index);
+
+    // Extract content between sections
+    for (let i = 0; i < foundSections.length; i++) {
+      const currentSection = foundSections[i];
+      const nextSection = foundSections[i + 1];
+      
+      const startIndex = currentSection.index;
+      const endIndex = nextSection ? nextSection.index : text.length;
+      
+      const content = text.substring(startIndex, endIndex).trim();
+      
+      if (content.length > 100) { // Only add if there's meaningful content
+        sections.push({
+          title: currentSection.title,
+          content: content.substring(0, maxSectionLength),
+          level: currentSection.title.match(/^\d+\./) ? 1 : 2
+        });
+      }
+    }
+
+    // If no structured sections found, split by likely section indicators
+    if (sections.length === 0) {
+      const chunks = text.split(/\b(?:Abstract|Introduction|Methods?|Results?|Discussion|Conclusion|References?)\b/i);
+      if (chunks.length > 1) {
+        for (let i = 1; i < chunks.length; i++) {
+          if (chunks[i].trim().length > 100) {
+            sections.push({
+              title: `Section ${i}`,
+              content: chunks[i].trim().substring(0, maxSectionLength),
+              level: 1
+            });
+          }
+        }
+      }
+    }
+
+    return sections;
   }
 
   async searchWithinPaper(pmid: string, searchTerm: string, pmcid?: string): Promise<string[]> {

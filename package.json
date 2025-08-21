@@ -1,6 +1,6 @@
 {
   "name": "scholarly-research-mcp",
-  "version": "1.2.5",
+  "version": "1.3.0",
   "description": "MCP server for scholarly research across PubMed, JSTOR, and Google Scholar",
   "main": "dist/index.js",
   "scripts": {
