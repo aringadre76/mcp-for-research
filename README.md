@@ -25,29 +25,345 @@ A Model Context Protocol (MCP) server that provides access to academic research 
 
 ## Installation
 
-1. Clone the repository:
+### Prerequisites
+
+Before installing the Scholarly Research MCP Server, ensure you have the following prerequisites installed on your system:
+
+#### **Node.js and npm**
+- **Node.js**: Version 18.0.0 or higher
+- **npm**: Version 8.0.0 or higher (comes with Node.js)
+
+#### **Git** (for cloning from repository)
+- **Git**: Version 2.20.0 or higher
+
+### Platform-Specific Installation
+
+#### **Linux (Ubuntu/Debian)**
+
+1. **Update system packages:**
 ```bash
-git clone <repository-url>
-cd scholarly-research-mcp
+sudo apt update && sudo apt upgrade -y
 ```
 
-2. Install dependencies:
+2. **Install Node.js and npm:**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+3. **Verify installation:**
+```bash
+node --version
+npm --version
+```
+
+4. **Install Git (if not already installed):**
+```bash
+sudo apt install git -y
+```
+
+5. **Clone the repository:**
+```bash
+git clone https://github.com/aringad76/mcp-for-research.git
+cd mcp-for-research
+```
+
+6. **Install dependencies:**
 ```bash
 npm install
 ```
 
-3. Build the project:
+7. **Build the project:**
 ```bash
 npm run build
 ```
 
-## Configuration
+#### **Linux (CentOS/RHEL/Fedora)**
 
-### PubMed API Key (Optional)
+1. **Update system packages:**
+```bash
+sudo yum update -y
+# For Fedora: sudo dnf update -y
+```
+
+2. **Install Node.js and npm:**
+```bash
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo yum install -y nodejs
+# For Fedora: sudo dnf install -y nodejs
+```
+
+3. **Verify installation:**
+```bash
+node --version
+npm --version
+```
+
+4. **Install Git (if not already installed):**
+```bash
+sudo yum install git -y
+# For Fedora: sudo dnf install git -y
+```
+
+5. **Clone and setup (same as Ubuntu/Debian):**
+```bash
+git clone https://github.com/aringad76/mcp-for-research.git
+cd mcp-for-research
+npm install
+npm run build
+```
+
+#### **Linux (Arch Linux)**
+
+1. **Update system packages:**
+```bash
+sudo pacman -Syu
+```
+
+2. **Install Node.js and npm:**
+```bash
+sudo pacman -S nodejs npm
+```
+
+3. **Install Git (if not already installed):**
+```bash
+sudo pacman -S git
+```
+
+4. **Clone and setup:**
+```bash
+git clone https://github.com/aringad76/mcp-for-research.git
+cd mcp-for-research
+npm install
+npm run build
+```
+
+#### **macOS**
+
+1. **Install Homebrew (if not already installed):**
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+2. **Add Homebrew to PATH (if using Apple Silicon):**
+```bash
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+```
+
+3. **Install Node.js and npm:**
+```bash
+brew install node
+```
+
+4. **Verify installation:**
+```bash
+node --version
+npm --version
+```
+
+5. **Install Git (if not already installed):**
+```bash
+brew install git
+```
+
+6. **Clone the repository:**
+```bash
+git clone https://github.com/aringad76/mcp-for-research.git
+cd mcp-for-research
+```
+
+7. **Install dependencies:**
+```bash
+npm install
+```
+
+8. **Build the project:**
+```bash
+npm run build
+```
+
+#### **Windows**
+
+1. **Install Node.js:**
+   - Go to [https://nodejs.org/](https://nodejs.org/)
+   - Download the LTS version (18.x or higher)
+   - Run the installer and follow the setup wizard
+   - Ensure "Add to PATH" is checked during installation
+
+2. **Verify Node.js installation:**
+   - Open Command Prompt or PowerShell
+   - Run:
+```cmd
+node --version
+npm --version
+```
+
+3. **Install Git:**
+   - Go to [https://git-scm.com/](https://git-scm.com/)
+   - Download and install Git for Windows
+   - Use default settings during installation
+
+4. **Clone the repository:**
+   - Open Command Prompt or PowerShell
+   - Navigate to your desired directory
+   - Run:
+```cmd
+git clone https://github.com/aringad76/mcp-for-research.git
+cd mcp-for-research
+```
+
+5. **Install dependencies:**
+```cmd
+npm install
+```
+
+6. **Build the project:**
+```cmd
+npm run build
+```
+
+### Alternative Installation Methods
+
+#### **Using npm directly (if already published):**
+```bash
+npm install -g scholarly-research-mcp
+```
+
+#### **Using Docker (if available):**
+```bash
+docker pull aringad76/scholarly-research-mcp
+docker run -p 3000:3000 aringad76/scholarly-research-mcp
+```
+
+### Post-Installation Verification
+
+After installation, verify everything is working:
+
+1. **Check if the server starts:**
+```bash
+npm start
+```
+
+2. **Test the build:**
+```bash
+npm run build
+```
+
+3. **Run tests:**
+```bash
+npm test
+```
+
+### Troubleshooting Installation Issues
+
+#### **Common Linux Issues:**
+
+**Permission Denied Errors:**
+```bash
+sudo chown -R $USER:$USER ~/.npm
+sudo chown -R $USER:$USER ~/.config
+```
+
+**Node.js Version Issues:**
+```bash
+# Install Node Version Manager (nvm)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+source ~/.bashrc
+nvm install 18
+nvm use 18
+```
+
+**Build Failures:**
+```bash
+# Clear npm cache
+npm cache clean --force
+# Remove node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+#### **Common macOS Issues:**
+
+**Homebrew Permission Issues:**
+```bash
+sudo chown -R $(whoami) /usr/local/bin /usr/local/lib /usr/local/sbin
+chmod u+w /usr/local/bin /usr/local/lib /usr/local/sbin
+```
+
+**Node.js Path Issues:**
+```bash
+# Add to ~/.zshrc or ~/.bash_profile
+export PATH="/usr/local/bin:$PATH"
+```
+
+#### **Common Windows Issues:**
+
+**Path Not Found:**
+- Ensure Node.js and Git are added to PATH during installation
+- Restart Command Prompt/PowerShell after installation
+- Check System Environment Variables
+
+**Build Script Failures:**
+```cmd
+# Run as Administrator if needed
+npm cache clean --force
+rmdir /s node_modules
+del package-lock.json
+npm install
+```
+
+**Git Issues:**
+- Ensure Git is installed and accessible from PATH
+- Use Git Bash for better compatibility
+
+### Development Environment Setup
+
+For developers who want to contribute:
+
+1. **Install TypeScript globally:**
+```bash
+npm install -g typescript ts-node
+```
+
+2. **Install development dependencies:**
+```bash
+npm install --save-dev
+```
+
+3. **Set up pre-commit hooks:**
+```bash
+npm run setup:hooks
+```
+
+4. **Configure your editor:**
+   - Install TypeScript extensions
+   - Configure ESLint and Prettier if using
+
+### Configuration
+
+#### **PubMed API Key (Optional)**
 While not required, you can get a free API key from NCBI to increase rate limits:
+
 1. Go to [NCBI Account](https://www.ncbi.nlm.nih.gov/account/)
 2. Create an account and get your API key
-3. Set the environment variable: `export PUBMED_API_KEY=your_key_here`
+3. Set the environment variable:
+
+**Linux/macOS:**
+```bash
+export PUBMED_API_KEY=your_key_here
+echo 'export PUBMED_API_KEY=your_key_here' >> ~/.bashrc
+```
+
+**Windows:**
+```cmd
+set PUBMED_API_KEY=your_key_here
+```
+
+**Or create a .env file:**
+```bash
+echo "PUBMED_API_KEY=your_key_here" > .env
+```
 
 ## Usage
 
@@ -59,6 +375,11 @@ npm start
 ### Development Mode
 ```bash
 npm run dev
+```
+
+### Production Mode
+```bash
+npm run prod
 ```
 
 ## Available Tools
