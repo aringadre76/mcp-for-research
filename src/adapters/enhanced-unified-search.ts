@@ -1,5 +1,6 @@
 import { PubMedAdapter } from './pubmed';
 import { GoogleScholarAdapter } from './google-scholar';
+import { ArXivAdapter } from './arxiv';
 import { GoogleScholarFirecrawlAdapter } from './google-scholar-firecrawl';
 
 export interface UnifiedPaper {
@@ -8,7 +9,7 @@ export interface UnifiedPaper {
   journal: string;
   publicationDate: string;
   abstract: string;
-  source: 'pubmed' | 'google-scholar' | 'both';
+  source: 'pubmed' | 'google-scholar' | 'arxiv' | 'both';
   pmid?: string;
   pmcid?: string;
   doi?: string;
@@ -17,6 +18,8 @@ export interface UnifiedPaper {
   citations: number;
   pmcFullTextUrl?: string;
   searchMethod?: 'puppeteer' | 'firecrawl';
+  arxivId?: string;
+  categories?: string[];
 }
 
 export interface EnhancedUnifiedSearchOptions {
@@ -26,7 +29,7 @@ export interface EnhancedUnifiedSearchOptions {
   endDate?: number;
   journal?: string;
   author?: string;
-  sources?: ('pubmed' | 'google-scholar')[];
+  sources?: ('pubmed' | 'google-scholar' | 'arxiv')[];
   sortBy?: 'relevance' | 'date' | 'citations';
   preferFirecrawl?: boolean;
 }
@@ -39,12 +42,14 @@ export interface FirecrawlMCPClient {
 export class EnhancedUnifiedSearchAdapter {
   private pubmedAdapter: PubMedAdapter;
   private googleScholarAdapter: GoogleScholarAdapter;
+  private arxivAdapter: ArXivAdapter;
   private googleScholarFirecrawlAdapter: GoogleScholarFirecrawlAdapter;
   private useFirecrawl: boolean = false;
 
   constructor(firecrawlClient?: FirecrawlMCPClient) {
     this.pubmedAdapter = new PubMedAdapter();
     this.googleScholarAdapter = new GoogleScholarAdapter();
+    this.arxivAdapter = new ArXivAdapter();
     this.googleScholarFirecrawlAdapter = new GoogleScholarFirecrawlAdapter(firecrawlClient);
     
     if (firecrawlClient) {
@@ -69,7 +74,7 @@ export class EnhancedUnifiedSearchAdapter {
       if (sources.includes('pubmed')) {
         const pubmedResults = await this.pubmedAdapter.searchPapers({
           query: options.query,
-          maxResults: Math.ceil(maxResults / 2),
+          maxResults: Math.ceil(maxResults / 3),
           startDate: options.startDate,
           endDate: options.endDate ? options.endDate.toString() : undefined,
           journal: options.journal,
@@ -101,7 +106,7 @@ export class EnhancedUnifiedSearchAdapter {
           try {
             googleResults = await this.googleScholarFirecrawlAdapter.searchPapers({
               query: options.query,
-              maxResults: Math.ceil(maxResults / 2),
+              maxResults: Math.ceil(maxResults / 3),
               startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
               endYear: options.endDate,
               sortBy: options.sortBy
@@ -115,7 +120,7 @@ export class EnhancedUnifiedSearchAdapter {
         if (!this.useFirecrawl || googleResults.length === 0) {
           googleResults = await this.googleScholarAdapter.searchPapers({
             query: options.query,
-            maxResults: Math.ceil(maxResults / 2),
+            maxResults: Math.ceil(maxResults / 3),
             startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
             endYear: options.endDate,
             sortBy: options.sortBy
@@ -136,6 +141,32 @@ export class EnhancedUnifiedSearchAdapter {
         }));
         
         results.push(...unifiedGoogleResults);
+      }
+
+      if (sources.includes('arxiv')) {
+        const arxivResults = await this.arxivAdapter.searchPapers({
+          query: options.query,
+          maxResults: Math.ceil(maxResults / 3),
+          startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
+          endYear: options.endDate,
+          sortBy: options.sortBy === 'date' ? 'submittedDate' : 'relevance'
+        });
+        
+        const unifiedArxivResults: UnifiedPaper[] = arxivResults.map(paper => ({
+          title: paper.title,
+          authors: paper.authors,
+          journal: 'ArXiv preprint',
+          publicationDate: paper.publicationDate,
+          abstract: paper.abstract,
+          source: 'arxiv' as const,
+          url: paper.absUrl,
+          pdfUrl: paper.pdfUrl,
+          citations: 0,
+          arxivId: paper.id,
+          categories: paper.categories
+        }));
+        
+        results.push(...unifiedArxivResults);
       }
       
       return this.deduplicateAndSort(results, options.sortBy).slice(0, maxResults);
@@ -189,7 +220,9 @@ export class EnhancedUnifiedSearchAdapter {
             pdfUrl: paper.pdfUrl || existing.pdfUrl,
             citations: Math.max(paper.citations, existing.citations),
             pmcFullTextUrl: paper.pmcFullTextUrl || existing.pmcFullTextUrl,
-            searchMethod: paper.searchMethod || existing.searchMethod
+            searchMethod: paper.searchMethod || existing.searchMethod,
+            arxivId: paper.arxivId || existing.arxivId,
+            categories: paper.categories || existing.categories
           });
         }
       }
@@ -211,7 +244,7 @@ export class EnhancedUnifiedSearchAdapter {
     }
   }
 
-  async getPaperDetails(identifier: string, source: 'pubmed' | 'google-scholar'): Promise<UnifiedPaper | null> {
+  async getPaperDetails(identifier: string, source: 'pubmed' | 'google-scholar' | 'arxiv'): Promise<UnifiedPaper | null> {
     try {
       if (source === 'pubmed') {
         const paper = await this.pubmedAdapter.getPaperById(identifier);
@@ -231,7 +264,7 @@ export class EnhancedUnifiedSearchAdapter {
           citations: 0,
           pmcFullTextUrl: paper.pmcFullTextUrl
         };
-      } else {
+      } else if (source === 'google-scholar') {
         if (this.useFirecrawl) {
           const paper = await this.googleScholarFirecrawlAdapter.getPaperDetails(identifier);
           if (!paper) return null;
@@ -251,17 +284,35 @@ export class EnhancedUnifiedSearchAdapter {
             searchMethod: 'puppeteer'
           };
         }
+      } else if (source === 'arxiv') {
+        const paper = await this.arxivAdapter.getPaperById(identifier);
+        if (!paper) return null;
+        
+        return {
+          title: paper.title,
+          authors: paper.authors,
+          journal: 'ArXiv preprint',
+          publicationDate: paper.publicationDate,
+          abstract: paper.abstract,
+          source: 'arxiv',
+          url: paper.absUrl,
+          pdfUrl: paper.pdfUrl,
+          citations: 0,
+          arxivId: paper.id,
+          categories: paper.categories
+        };
       }
+      return null;
     } catch (error) {
       throw new Error(`Failed to get paper details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  async getCitationCount(identifier: string, source: 'pubmed' | 'google-scholar'): Promise<number | null> {
+  async getCitationCount(identifier: string, source: 'pubmed' | 'google-scholar' | 'arxiv'): Promise<number | null> {
     try {
       if (source === 'pubmed') {
         return await this.pubmedAdapter.getCitationCount(identifier);
-      } else {
+      } else if (source === 'google-scholar') {
         if (this.useFirecrawl) {
           const paper = await this.googleScholarFirecrawlAdapter.getPaperDetails(identifier);
           if (!paper) return null;
@@ -271,13 +322,16 @@ export class EnhancedUnifiedSearchAdapter {
           if (!paper) return null;
           return await this.googleScholarAdapter.getCitationCount(paper.title);
         }
+      } else if (source === 'arxiv') {
+        return 0;
       }
+      return null;
     } catch (error) {
       throw new Error(`Failed to get citation count: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  async getRelatedPapers(identifier: string, source: 'pubmed' | 'google-scholar', maxResults: number = 10): Promise<UnifiedPaper[]> {
+  async getRelatedPapers(identifier: string, source: 'pubmed' | 'google-scholar' | 'arxiv', maxResults: number = 10): Promise<UnifiedPaper[]> {
     try {
       if (source === 'pubmed') {
         const paper = await this.pubmedAdapter.getPaperById(identifier);
@@ -302,7 +356,7 @@ export class EnhancedUnifiedSearchAdapter {
           citations: 0,
           pmcFullTextUrl: p.pmcFullTextUrl
         }));
-      } else {
+      } else if (source === 'google-scholar') {
         if (this.useFirecrawl) {
           const paper = await this.googleScholarFirecrawlAdapter.getPaperDetails(identifier);
           if (!paper) return [];
@@ -340,7 +394,24 @@ export class EnhancedUnifiedSearchAdapter {
             searchMethod: 'puppeteer'
           }));
         }
+      } else if (source === 'arxiv') {
+        const related = await this.arxivAdapter.getRelatedPapers(identifier, maxResults);
+        
+        return related.map(p => ({
+          title: p.title,
+          authors: p.authors,
+          journal: 'ArXiv preprint',
+          publicationDate: p.publicationDate,
+          abstract: p.abstract,
+          source: 'arxiv' as const,
+          url: p.absUrl,
+          pdfUrl: p.pdfUrl,
+          citations: 0,
+          arxivId: p.id,
+          categories: p.categories
+        }));
       }
+      return [];
     } catch (error) {
       throw new Error(`Failed to get related papers: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -348,6 +419,7 @@ export class EnhancedUnifiedSearchAdapter {
 
   async close(): Promise<void> {
     await this.googleScholarAdapter.close();
+    await this.arxivAdapter.close();
   }
 
   getSearchMethod(): 'puppeteer' | 'firecrawl' | 'mixed' {

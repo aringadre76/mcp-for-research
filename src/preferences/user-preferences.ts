@@ -40,7 +40,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     sources: [
       { name: 'pubmed', enabled: true, priority: 1, maxResults: 15 },
       { name: 'google-scholar', enabled: true, priority: 2, maxResults: 15 },
-      { name: 'jstor', enabled: false, priority: 3, maxResults: 10 }
+      { name: 'arxiv', enabled: true, priority: 3, maxResults: 15 },
+      { name: 'jstor', enabled: false, priority: 4, maxResults: 10 }
     ]
   },
   display: {

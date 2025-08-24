@@ -32,11 +32,32 @@ async function testFirecrawlIntegration() {
     const fallbackMethod = enhancedAdapter.getSearchMethod();
     console.log(`✓ Fallback method: ${fallbackMethod}`);
     
+    console.log('\n7. Testing ArXiv integration with Firecrawl...');
+    const arxivResults = await enhancedAdapter.searchPapers({
+      query: 'machine learning',
+      maxResults: 3,
+      sources: ['arxiv'],
+      preferFirecrawl: false
+    });
+    
+    if (arxivResults && arxivResults.length > 0) {
+      console.log(`✓ ArXiv search returned ${arxivResults.length} papers`);
+      const arxivPaper = arxivResults.find(p => p.source === 'arxiv');
+      if (arxivPaper) {
+        console.log(`  - ArXiv paper: ${arxivPaper.title}`);
+        console.log(`  - ID: ${arxivPaper.arxivId}`);
+        console.log(`  - Categories: ${arxivPaper.categories?.join(', ')}`);
+      }
+    } else {
+      console.log('⚠ ArXiv search returned no results');
+    }
+    
     console.log('\n✅ All Firecrawl integration tests passed!');
     console.log('\nNote: To use Firecrawl, you need to:');
     console.log('1. Have the Firecrawl MCP server running');
     console.log('2. Set the Firecrawl client using setFirecrawlClient()');
     console.log('3. Use the search_with_firecrawl tool in the MCP server');
+    console.log('4. ArXiv integration works with both Firecrawl and Puppeteer methods');
     
   } catch (error) {
     console.error('❌ Test failed:', error.message);

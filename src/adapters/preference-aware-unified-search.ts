@@ -1,5 +1,6 @@
 import { PubMedAdapter } from './pubmed';
 import { GoogleScholarAdapter } from './google-scholar';
+import { ArXivAdapter } from './arxiv';
 import { GoogleScholarFirecrawlAdapter } from './google-scholar-firecrawl';
 import { UnifiedPaper, EnhancedUnifiedSearchOptions, FirecrawlMCPClient } from './enhanced-unified-search';
 import { UserPreferencesManager, SourcePreference } from '../preferences/user-preferences';
@@ -13,6 +14,7 @@ export interface PreferenceAwareSearchOptions extends Omit<EnhancedUnifiedSearch
 export class PreferenceAwareUnifiedSearchAdapter {
   private pubmedAdapter: PubMedAdapter;
   private googleScholarAdapter: GoogleScholarAdapter;
+  private arxivAdapter: ArXivAdapter;
   private googleScholarFirecrawlAdapter: GoogleScholarFirecrawlAdapter;
   private preferencesManager: UserPreferencesManager;
   private useFirecrawl: boolean = false;
@@ -20,6 +22,7 @@ export class PreferenceAwareUnifiedSearchAdapter {
   constructor(firecrawlClient?: FirecrawlMCPClient) {
     this.pubmedAdapter = new PubMedAdapter();
     this.googleScholarAdapter = new GoogleScholarAdapter();
+    this.arxivAdapter = new ArXivAdapter();
     this.googleScholarFirecrawlAdapter = new GoogleScholarFirecrawlAdapter(firecrawlClient);
     this.preferencesManager = UserPreferencesManager.getInstance();
     
@@ -44,9 +47,9 @@ export class PreferenceAwareUnifiedSearchAdapter {
   async searchPapers(options: PreferenceAwareSearchOptions): Promise<UnifiedPaper[]> {
     const preferences = this.preferencesManager.getPreferences();
     
-    const sources = options.overrideSources || 
+    const sources = (options.overrideSources || 
       (options.respectUserPreferences !== false ? this.preferencesManager.getSourcesForSearch() : 
-       options.sources || ['pubmed', 'google-scholar']);
+       options.sources || ['pubmed', 'google-scholar', 'arxiv'])) as string[];
     
     const maxResults = options.maxResults || preferences.search.defaultMaxResults;
     const sortBy = options.sortBy || preferences.search.defaultSortBy;
@@ -63,68 +66,97 @@ export class PreferenceAwareUnifiedSearchAdapter {
         const sourceMaxResults = sourcePrefs.maxResults || Math.ceil(maxResults / sources.length);
         
         try {
-          if (sourceName === 'pubmed') {
-            const pubmedResults = await this.pubmedAdapter.searchPapers({
-              query: options.query,
-              maxResults: sourceMaxResults,
-              startDate: options.startDate,
-              endDate: options.endDate ? options.endDate.toString() : undefined,
-              journal: options.journal,
-              author: options.author
-            });
-            
-            const unifiedPubmedResults: UnifiedPaper[] = pubmedResults.map(paper => ({
-              title: paper.title,
-              authors: paper.authors,
-              journal: paper.journal,
-              publicationDate: paper.publicationDate,
-              abstract: paper.abstract,
-              source: 'pubmed' as const,
-              pmid: paper.pmid,
-              pmcid: paper.pmcid,
-              doi: paper.doi,
-              url: paper.pmcFullTextUrl,
-              citations: 0,
-              pmcFullTextUrl: paper.pmcFullTextUrl
-            }));
-            
-            results.push(...unifiedPubmedResults);
-          }
-          
-          if (sourceName === 'google-scholar') {
-            const useFirecrawlForThisSearch = preferFirecrawl && this.isFirecrawlAvailable();
-            
-            if (useFirecrawlForThisSearch) {
-              try {
-                const scholarResults = await this.googleScholarFirecrawlAdapter.searchPapers({
-                  query: options.query,
-                  maxResults: sourceMaxResults,
-                  startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
-                  endYear: options.endDate || undefined,
-                  sortBy: sortBy
-                });
-                
-                const unifiedScholarResults: UnifiedPaper[] = scholarResults.map(paper => ({
-                  title: paper.title,
-                  authors: paper.authors,
-                  journal: paper.journal,
-                  publicationDate: paper.publicationDate,
-                  abstract: paper.abstract,
-                  source: 'google-scholar' as const,
-                  pmid: undefined,
-                  pmcid: undefined,
-                  doi: undefined,
-                  url: paper.url,
-                  citations: paper.citations || 0,
-                  pmcFullTextUrl: undefined,
-                  pdfUrl: paper.pdfUrl,
-                  searchMethod: 'firecrawl' as const
-                }));
-                
-                results.push(...unifiedScholarResults);
-              } catch (firecrawlError) {
-                console.warn('Firecrawl search failed, falling back to Puppeteer:', firecrawlError);
-                
+          switch (sourceName) {
+            case 'pubmed':
+              const pubmedResults = await this.pubmedAdapter.searchPapers({
+                query: options.query,
+                maxResults: sourceMaxResults,
+                startDate: options.startDate,
+                endDate: options.endDate ? options.endDate.toString() : undefined,
+                journal: options.journal,
+                author: options.author
+              });
+              
+              const unifiedPubmedResults: UnifiedPaper[] = pubmedResults.map(paper => ({
+                title: paper.title,
+                authors: paper.authors,
+                journal: paper.journal,
+                publicationDate: paper.publicationDate,
+                abstract: paper.abstract,
+                source: 'pubmed' as const,
+                pmid: paper.pmid,
+                pmcid: paper.pmcid,
+                doi: paper.doi,
+                url: paper.pmcFullTextUrl,
+                citations: 0,
+                pmcFullTextUrl: paper.pmcFullTextUrl
+              }));
+              
+              results.push(...unifiedPubmedResults);
+              break;
+              
+            case 'google-scholar':
+              const useFirecrawlForThisSearch = preferFirecrawl && this.isFirecrawlAvailable();
+              
+              if (useFirecrawlForThisSearch) {
+                try {
+                  const scholarResults = await this.googleScholarFirecrawlAdapter.searchPapers({
+                    query: options.query,
+                    maxResults: sourceMaxResults,
+                    startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
+                    endYear: options.endDate || undefined,
+                    sortBy: sortBy
+                  });
+                  
+                  const unifiedScholarResults: UnifiedPaper[] = scholarResults.map(paper => ({
+                    title: paper.title,
+                    authors: paper.authors,
+                    journal: paper.journal,
+                    publicationDate: paper.publicationDate,
+                    abstract: paper.abstract,
+                    source: 'google-scholar' as const,
+                    pmid: undefined,
+                    pmcid: undefined,
+                    doi: undefined,
+                    url: paper.url,
+                    citations: paper.citations || 0,
+                    pmcFullTextUrl: undefined,
+                    pdfUrl: paper.pdfUrl,
+                    searchMethod: 'firecrawl' as const
+                  }));
+                  
+                  results.push(...unifiedScholarResults);
+                } catch (firecrawlError) {
+                  console.warn('Firecrawl search failed, falling back to Puppeteer:', firecrawlError);
+                  
+                  const scholarResults = await this.googleScholarAdapter.searchPapers({
+                    query: options.query,
+                    maxResults: sourceMaxResults,
+                    startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
+                    endYear: options.endDate || undefined,
+                    sortBy: sortBy
+                  });
+                  
+                  const unifiedScholarResults: UnifiedPaper[] = scholarResults.map(paper => ({
+                    title: paper.title,
+                    authors: paper.authors,
+                    journal: paper.journal,
+                    publicationDate: paper.publicationDate,
+                    abstract: paper.abstract,
+                    source: 'google-scholar' as const,
+                    pmid: undefined,
+                    pmcid: undefined,
+                    doi: undefined,
+                    url: paper.url,
+                    citations: paper.citations || 0,
+                    pmcFullTextUrl: undefined,
+                    pdfUrl: paper.pdfUrl,
+                    searchMethod: 'puppeteer' as const
+                  }));
+                  
+                  results.push(...unifiedScholarResults);
+                }
+              } else {
                 const scholarResults = await this.googleScholarAdapter.searchPapers({
                   query: options.query,
                   maxResults: sourceMaxResults,
@@ -152,34 +184,37 @@ export class PreferenceAwareUnifiedSearchAdapter {
                 
                 results.push(...unifiedScholarResults);
               }
-            } else {
-              const scholarResults = await this.googleScholarAdapter.searchPapers({
+              break;
+              
+            case 'arxiv':
+              const arxivResults = await this.arxivAdapter.searchPapers({
                 query: options.query,
                 maxResults: sourceMaxResults,
                 startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
                 endYear: options.endDate || undefined,
-                sortBy: sortBy
+                sortBy: sortBy === 'date' ? 'submittedDate' : 'relevance'
               });
               
-              const unifiedScholarResults: UnifiedPaper[] = scholarResults.map(paper => ({
+              const unifiedArxivResults: UnifiedPaper[] = arxivResults.map(paper => ({
                 title: paper.title,
                 authors: paper.authors,
-                journal: paper.journal,
+                journal: 'ArXiv preprint',
                 publicationDate: paper.publicationDate,
                 abstract: paper.abstract,
-                source: 'google-scholar' as const,
+                source: 'arxiv' as const,
                 pmid: undefined,
                 pmcid: undefined,
-                doi: undefined,
-                url: paper.url,
-                citations: paper.citations || 0,
+                doi: paper.doi,
+                url: paper.absUrl,
+                citations: 0,
                 pmcFullTextUrl: undefined,
                 pdfUrl: paper.pdfUrl,
-                searchMethod: 'puppeteer' as const
+                arxivId: paper.id,
+                categories: paper.categories
               }));
               
-              results.push(...unifiedScholarResults);
-            }
+              results.push(...unifiedArxivResults);
+              break;
           }
           
         } catch (sourceError) {
@@ -235,6 +270,8 @@ export class PreferenceAwareUnifiedSearchAdapter {
       const pmidInfo = paper.pmid ? `\n   - PMID: ${paper.pmid}` : '';
       const pmcInfo = paper.pmcid ? `\n   - PMC ID: ${paper.pmcid} (Full text likely available)` : '';
       const doiInfo = paper.doi ? `\n   - DOI: ${paper.doi}` : '';
+      const arxivInfo = paper.arxivId ? `\n   - ArXiv ID: ${paper.arxivId}` : '';
+      const categoriesInfo = paper.categories && paper.categories.length > 0 ? `\n   - Categories: ${paper.categories.join(', ')}` : '';
       const urlInfo = showUrls && paper.url ? `\n   - URL: ${paper.url}` : '';
       const pdfInfo = showUrls && paper.pdfUrl ? `\n   - PDF: ${paper.pdfUrl}` : '';
       const citationsInfo = showCitations && paper.citations > 0 ? `\n   - Citations: ${paper.citations}` : '';
@@ -246,7 +283,7 @@ export class PreferenceAwareUnifiedSearchAdapter {
       return `${index + 1}. **${paper.title}**
    - Authors: ${authors}
    - Journal: ${paper.journal}
-   - Publication Date: ${paper.publicationDate}${sourceInfo}${pmidInfo}${pmcInfo}${doiInfo}${urlInfo}${pdfInfo}${citationsInfo}${searchMethodInfo}
+   - Publication Date: ${paper.publicationDate}${sourceInfo}${pmidInfo}${pmcInfo}${doiInfo}${arxivInfo}${categoriesInfo}${urlInfo}${pdfInfo}${citationsInfo}${searchMethodInfo}
 ${abstractText}
 `;
     }).join('\n');

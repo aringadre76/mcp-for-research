@@ -93,9 +93,14 @@ class TestRunner {
     this.log('\n=== Testing Basic Functionality ===');
     
     await this.runCommand('npm run build', 'Build Server');
+    await this.runCommand('npm run test:build', 'Build Test', 'Build test completed successfully');
     await this.runCommand('npm run test:google-scholar-simple', 'Google Scholar Tests', 'All basic tests passed');
     await this.runCommand('npm run test:unified', 'Unified Search Tests', 'Test completed');
     await this.runCommand('npm run test:firecrawl', 'Firecrawl Tests', 'All Firecrawl integration tests passed');
+    await this.runCommand('npm run test:firecrawl-arxiv', 'Firecrawl with ArXiv Tests', 'All Firecrawl with ArXiv tests completed');
+    await this.runCommand('npm run test:arxiv', 'ArXiv Adapter Tests', 'All ArXiv adapter tests completed');
+    await this.runCommand('npm run test:unified-arxiv', 'Unified Search with ArXiv Tests', 'All unified search with ArXiv tests completed');
+    await this.runCommand('npm run test:arxiv-comprehensive', 'ArXiv Comprehensive Tests', 'All ArXiv comprehensive tests completed');
   }
 
   async testAdapters() {

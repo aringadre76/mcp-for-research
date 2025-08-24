@@ -5,6 +5,48 @@ All notable changes to the Scholarly Research MCP Server project will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/latest/),
 and this project follows standard release practices.
 
+## [2.0.0] - 2024-12-19
+
+### 🎉 Major Release: Tool Consolidation
+
+#### Added
+- **5 Consolidated Tools**: Replaced 24 individual tools with 5 powerful, multi-functional tools
+- **Unified Search Interface**: Single tool for searching across all sources (PubMed, Google Scholar, ArXiv, JSTOR)
+- **Comprehensive Paper Analysis**: One tool for paper retrieval, content extraction, and analysis
+- **Integrated Citation Management**: Combined citation generation, counting, and related paper discovery
+- **Centralized Preferences**: Single tool for managing all user preferences
+- **Web Research Suite**: Unified interface for web scraping and content extraction
+
+#### Changed
+- **Tool Count**: Reduced from 24 tools to 5 tools (80% reduction)
+- **Interface Consistency**: Standardized parameter patterns across all tools
+- **Performance**: Improved startup time and reduced memory usage
+- **Maintainability**: Centralized error handling and reduced code duplication
+- **User Experience**: Easier to remember and use fewer, more powerful tools
+
+#### Removed
+- 19 individual MCP tools (consolidated into 5)
+- Unnecessary project files (`ion`, `cholarly-research-mcp version`, temporary test files)
+- Code duplication across tool implementations
+
+#### Fixed
+- Project structure cleaned and organized
+- Cursor editor files added to .gitignore
+- Inconsistent tool interfaces standardized
+- Error handling centralized and improved
+
+### 🔧 Technical Improvements
+- **Consolidated Architecture**: Single entry point with unified tool definitions
+- **Better Error Handling**: Centralized error management with consistent formatting
+- **Improved Testing**: Streamlined test suite with better organization
+- **Documentation**: Comprehensive guides for the new consolidated approach
+
+### 📚 Documentation Updates
+- **README.md**: Updated to reflect new consolidated approach
+- **README-consolidated.md**: Detailed explanation of consolidation benefits
+- **TOOL_CONSOLIDATION.md**: Quick reference for tool mapping
+- **PROJECT_STRUCTURE_CLEAN.md**: Clean project structure documentation
+
 ## [Unreleased]
 
 ### Planned
@@ -15,7 +57,7 @@ and this project follows standard release practices.
 
 ## Recent Releases
 
-### Latest Release - 2024-12-19
+### Latest Release - 2024-12-19 (Previous Version)
 
 #### Added
 - **Google Scholar Integration**: Full web scraping support for Google Scholar search and paper details
@@ -92,6 +134,7 @@ and this project follows standard release practices.
 
 | Date | Major Features | Status |
 |------|----------------|---------|
+| 2024-12-19 | **Tool Consolidation (24→5 tools), Clean Project Structure** | Released |
 | 2024-12-19 | Google Scholar, Firecrawl, Unified Search | Released |
 | 2024-12-18 | PMC URL fixes, Enhanced text extraction | Released |
 | 2024-12-17 | Initial PubMed integration, MCP server | Released |

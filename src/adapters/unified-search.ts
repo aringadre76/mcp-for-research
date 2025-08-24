@@ -1,5 +1,6 @@
 import { PubMedAdapter } from './pubmed';
 import { GoogleScholarAdapter } from './google-scholar';
+import { ArXivAdapter } from './arxiv';
 
 export interface UnifiedPaper {
   title: string;
@@ -7,7 +8,7 @@ export interface UnifiedPaper {
   journal: string;
   publicationDate: string;
   abstract: string;
-  source: 'pubmed' | 'google-scholar' | 'both';
+  source: 'pubmed' | 'google-scholar' | 'arxiv' | 'both';
   pmid?: string;
   pmcid?: string;
   doi?: string;
@@ -15,6 +16,8 @@ export interface UnifiedPaper {
   pdfUrl?: string;
   citations: number;
   pmcFullTextUrl?: string;
+  arxivId?: string;
+  categories?: string[];
 }
 
 export interface UnifiedSearchOptions {
@@ -24,17 +27,19 @@ export interface UnifiedSearchOptions {
   endDate?: number;
   journal?: string;
   author?: string;
-  sources?: ('pubmed' | 'google-scholar')[];
+  sources?: ('pubmed' | 'google-scholar' | 'arxiv')[];
   sortBy?: 'relevance' | 'date' | 'citations';
 }
 
 export class UnifiedSearchAdapter {
   private pubmedAdapter: PubMedAdapter;
   private googleScholarAdapter: GoogleScholarAdapter;
+  private arxivAdapter: ArXivAdapter;
 
   constructor() {
     this.pubmedAdapter = new PubMedAdapter();
     this.googleScholarAdapter = new GoogleScholarAdapter();
+    this.arxivAdapter = new ArXivAdapter();
   }
 
   async searchPapers(options: UnifiedSearchOptions): Promise<UnifiedPaper[]> {
@@ -45,7 +50,7 @@ export class UnifiedSearchAdapter {
       if (sources.includes('pubmed')) {
         const pubmedResults = await this.pubmedAdapter.searchPapers({
           query: options.query,
-          maxResults: Math.ceil(maxResults / 2),
+          maxResults: Math.ceil(maxResults / 3),
           startDate: options.startDate,
           endDate: options.endDate ? options.endDate.toString() : undefined,
           journal: options.journal,
@@ -73,7 +78,7 @@ export class UnifiedSearchAdapter {
       if (sources.includes('google-scholar')) {
         const googleResults = await this.googleScholarAdapter.searchPapers({
           query: options.query,
-          maxResults: Math.ceil(maxResults / 2),
+          maxResults: Math.ceil(maxResults / 3),
           startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
           endYear: options.endDate,
           sortBy: options.sortBy
@@ -92,6 +97,32 @@ export class UnifiedSearchAdapter {
         }));
         
         results.push(...unifiedGoogleResults);
+      }
+
+      if (sources.includes('arxiv')) {
+        const arxivResults = await this.arxivAdapter.searchPapers({
+          query: options.query,
+          maxResults: Math.ceil(maxResults / 3),
+          startYear: options.startDate ? parseInt(options.startDate.split('/')[0]) : undefined,
+          endYear: options.endDate,
+          sortBy: options.sortBy === 'date' ? 'submittedDate' : 'relevance'
+        });
+        
+        const unifiedArxivResults: UnifiedPaper[] = arxivResults.map(paper => ({
+          title: paper.title,
+          authors: paper.authors,
+          journal: 'ArXiv preprint',
+          publicationDate: paper.publicationDate,
+          abstract: paper.abstract,
+          source: 'arxiv' as const,
+          url: paper.absUrl,
+          pdfUrl: paper.pdfUrl,
+          citations: 0,
+          arxivId: paper.id,
+          categories: paper.categories
+        }));
+        
+        results.push(...unifiedArxivResults);
       }
       
       return this.deduplicateAndSort(results, options.sortBy).slice(0, maxResults);
@@ -119,7 +150,9 @@ export class UnifiedSearchAdapter {
             url: paper.url || existing.url,
             pdfUrl: paper.pdfUrl || existing.pdfUrl,
             citations: Math.max(paper.citations, existing.citations),
-            pmcFullTextUrl: paper.pmcFullTextUrl || existing.pmcFullTextUrl
+            pmcFullTextUrl: paper.pmcFullTextUrl || existing.pmcFullTextUrl,
+            arxivId: paper.arxivId || existing.arxivId,
+            categories: paper.categories || existing.categories
           });
         }
       }
@@ -141,7 +174,7 @@ export class UnifiedSearchAdapter {
     }
   }
 
-  async getPaperDetails(identifier: string, source: 'pubmed' | 'google-scholar'): Promise<UnifiedPaper | null> {
+  async getPaperDetails(identifier: string, source: 'pubmed' | 'google-scholar' | 'arxiv'): Promise<UnifiedPaper | null> {
     try {
       if (source === 'pubmed') {
         const paper = await this.pubmedAdapter.getPaperById(identifier);
@@ -161,7 +194,7 @@ export class UnifiedSearchAdapter {
           citations: 0,
           pmcFullTextUrl: paper.pmcFullTextUrl
         };
-      } else {
+      } else if (source === 'google-scholar') {
         const paper = await this.googleScholarAdapter.getPaperDetails(identifier);
         if (!paper) return null;
         
@@ -169,27 +202,48 @@ export class UnifiedSearchAdapter {
           ...paper,
           source: 'google-scholar' as const
         };
+      } else if (source === 'arxiv') {
+        const paper = await this.arxivAdapter.getPaperById(identifier);
+        if (!paper) return null;
+        
+        return {
+          title: paper.title,
+          authors: paper.authors,
+          journal: 'ArXiv preprint',
+          publicationDate: paper.publicationDate,
+          abstract: paper.abstract,
+          source: 'arxiv',
+          url: paper.absUrl,
+          pdfUrl: paper.pdfUrl,
+          citations: 0,
+          arxivId: paper.id,
+          categories: paper.categories
+        };
       }
+      return null;
     } catch (error) {
       throw new Error(`Failed to get paper details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  async getCitationCount(identifier: string, source: 'pubmed' | 'google-scholar'): Promise<number | null> {
+  async getCitationCount(identifier: string, source: 'pubmed' | 'google-scholar' | 'arxiv'): Promise<number | null> {
     try {
       if (source === 'pubmed') {
         return await this.pubmedAdapter.getCitationCount(identifier);
-      } else {
+      } else if (source === 'google-scholar') {
         const paper = await this.googleScholarAdapter.getPaperDetails(identifier);
         if (!paper) return null;
         return await this.googleScholarAdapter.getCitationCount(paper.title);
+      } else if (source === 'arxiv') {
+        return 0;
       }
+      return null;
     } catch (error) {
       throw new Error(`Failed to get citation count: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  async getRelatedPapers(identifier: string, source: 'pubmed' | 'google-scholar', maxResults: number = 10): Promise<UnifiedPaper[]> {
+  async getRelatedPapers(identifier: string, source: 'pubmed' | 'google-scholar' | 'arxiv', maxResults: number = 10): Promise<UnifiedPaper[]> {
     try {
       if (source === 'pubmed') {
         const paper = await this.pubmedAdapter.getPaperById(identifier);
@@ -214,7 +268,7 @@ export class UnifiedSearchAdapter {
           citations: 0,
           pmcFullTextUrl: p.pmcFullTextUrl
         }));
-      } else {
+      } else if (source === 'google-scholar') {
         const paper = await this.googleScholarAdapter.getPaperDetails(identifier);
         if (!paper) return [];
         
@@ -231,7 +285,24 @@ export class UnifiedSearchAdapter {
           pdfUrl: p.pdfUrl,
           citations: p.citations
         }));
+      } else if (source === 'arxiv') {
+        const related = await this.arxivAdapter.getRelatedPapers(identifier, maxResults);
+        
+        return related.map(p => ({
+          title: p.title,
+          authors: p.authors,
+          journal: 'ArXiv preprint',
+          publicationDate: p.publicationDate,
+          abstract: p.abstract,
+          source: 'arxiv' as const,
+          url: p.absUrl,
+          pdfUrl: p.pdfUrl,
+          citations: 0,
+          arxivId: p.id,
+          categories: p.categories
+        }));
       }
+      return [];
     } catch (error) {
       throw new Error(`Failed to get related papers: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -239,5 +310,6 @@ export class UnifiedSearchAdapter {
 
   async close(): Promise<void> {
     await this.googleScholarAdapter.close();
+    await this.arxivAdapter.close();
   }
 }

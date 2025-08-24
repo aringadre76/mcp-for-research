@@ -1,6 +1,6 @@
-# Scholarly Research Tool
+# Scholarly Research MCP Server
 
-A powerful tool that helps you find and analyze academic research papers from PubMed, Google Scholar, and JSTOR.
+A powerful, consolidated research tool that helps you find and analyze academic research papers from PubMed, Google Scholar, ArXiv, and JSTOR through just 5 powerful tools.
 
 [![NPM](https://img.shields.io/badge/npm-published-orange)](https://www.npmjs.com/package/scholarly-research-mcp)
 [![GitHub](https://img.shields.io/badge/github-repo-blue)](https://github.com/aringadre76/mcp-for-research)
@@ -16,6 +16,15 @@ This tool helps you:
 - **Search within papers** to find specific information
 - **Organize research** with customizable preferences
 
+## Key Features
+
+- **5 Consolidated Tools**: Powerful, multi-functional tools instead of 24 separate ones
+- **Multi-Source Search**: PubMed, Google Scholar, ArXiv, and JSTOR
+- **User Preferences**: Customizable search and display settings
+- **Content Extraction**: Full-text paper access and analysis
+- **Citation Management**: Multiple citation format support
+- **Error Handling**: Robust fallback mechanisms
+
 ## Project Structure
 
 This tool is organized into several key components:
@@ -23,11 +32,12 @@ This tool is organized into several key components:
 ### **Core Components**
 ```
 src/
-├── index.ts                           # Main server entry point
+├── index.ts                           # Main server entry point (consolidated)
 ├── adapters/                          # Data source connectors
 │   ├── pubmed.ts                      # PubMed API integration
 │   ├── google-scholar.ts              # Google Scholar web scraping
 │   ├── google-scholar-firecrawl.ts    # Firecrawl integration
+│   ├── arxiv.ts                       # ArXiv integration
 │   ├── unified-search.ts              # Basic multi-source search
 │   ├── enhanced-unified-search.ts     # Advanced multi-source search
 │   └── preference-aware-unified-search.ts # User preference integration
@@ -53,7 +63,7 @@ docs/
 ```
 tests/
 ├── test-preferences.js                # Preference system tests
-├── test-all-tools-simple.sh           # Bash test runner
+├── test-all-tools-simple.sh           # Bash test runner (recommended)
 ├── test_all_tools.py                  # Python test runner
 └── test-all-tools.js                  # JavaScript test runner
 ```
@@ -66,13 +76,39 @@ tests/
 └── README.md                          # This file
 ```
 
-### **Key Features**
-- **24 MCP Tools**: Complete set of research tools
-- **Multi-Source Search**: PubMed, Google Scholar, and JSTOR
-- **User Preferences**: Customizable search and display settings
-- **Content Extraction**: Full-text paper access and analysis
-- **Citation Management**: Multiple citation format support
-- **Error Handling**: Robust fallback mechanisms
+## Available Tools
+
+The server provides **5 consolidated MCP tools** that replace the previous 24 individual tools:
+
+### 1. **`research_search`**
+Comprehensive research paper search across multiple sources with advanced filtering and unified results.
+
+**Combines**: All individual search tools from PubMed, Google Scholar, ArXiv, and JSTOR
+**Parameters**: Query, sources, filters, display options, sorting
+
+### 2. **`paper_analysis`**
+Get comprehensive paper information, full text, and analysis including quotes, statistics, and findings.
+
+**Combines**: Paper retrieval, content extraction, and analysis tools
+**Parameters**: Identifier, analysis type, quote limits, section lengths
+
+### 3. **`citation_manager`**
+Generate citations in multiple formats and get citation information including counts and related papers.
+
+**Combines**: Citation tools, citation counting, and related paper discovery
+**Parameters**: Identifier, action, format, related paper limits
+
+### 4. **`research_preferences`**
+Manage research preferences including source priorities, search settings, display options, and caching.
+
+**Combines**: All preference management tools
+**Parameters**: Action, category, various preference values
+
+### 5. **`web_research`**
+Perform web-based research using Firecrawl for reliable content extraction and analysis.
+
+**Combines**: Firecrawl integration and web research tools
+**Parameters**: Action, targets, options, crawling limits
 
 ## Quick Start
 
@@ -98,209 +134,157 @@ MCP is like a "language" that lets AI assistants talk to tools on your computer.
 
 ### Step-by-Step Setup
 
-#### Step 1: Install Node.js
-Node.js is like the "engine" that runs the research tool.
+1. **Download the tool**
+   ```bash
+   git clone https://github.com/aringadre76/mcp-for-research.git
+   cd mcp-for-research
+   ```
 
-**For Windows:**
-1. Go to [nodejs.org](https://nodejs.org)
-2. Click the big green "LTS" button to download
-3. Run the downloaded file and follow the installation steps
-4. Restart your computer
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-**For Mac:**
-1. Go to [nodejs.org](https://nodejs.org)
-2. Click the big green "LTS" button to download
-3. Open the downloaded file and follow the installation steps
+3. **Build the tool**
+   ```bash
+   npm run build
+   ```
 
-**For Linux:**
-```bash
-sudo apt update
-sudo apt install nodejs npm
+4. **Configure your AI assistant**
+   - Find "MCP Servers" or "Tools" in your AI assistant's settings
+   - Add a new MCP server
+   - Set the command to: `node dist/index.js`
+   - Set the working directory to your project folder
+
+5. **Test the setup**
+   ```bash
+   npm run test:all-tools-bash
+   ```
+
+## Usage Examples
+
+### Search for Papers
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "research_search",
+    "arguments": {
+      "query": "machine learning",
+      "sources": ["pubmed", "arxiv"],
+      "maxResults": 15,
+      "startDate": "2020/01/01"
+    }
+  }
+}
 ```
 
-**Check if it worked:**
-- Open Command Prompt (Windows) or Terminal (Mac/Linux)
-- Type: `node --version`
-- You should see a version number like "v18.17.0"
+### Analyze a Paper
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "paper_analysis",
+    "arguments": {
+      "identifier": "12345678",
+      "analysisType": "complete",
+      "maxQuotes": 20
+    }
+  }
+}
+```
 
-#### Step 2: Install the Research Tool
-This downloads the research tool to your computer.
+### Get Citations
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "citation_manager",
+    "arguments": {
+      "identifier": "12345678",
+      "action": "all",
+      "format": "apa"
+    }
+  }
+}
+```
 
-1. Open Command Prompt (Windows) or Terminal (Mac/Linux)
-2. Type this command and press Enter:
-   ```bash
-   npm install -g scholarly-research-mcp
-   ```
-3. Wait for it to finish (it might take a few minutes)
-4. You'll see a success message when it's done
+## Benefits of the Consolidated Approach
 
-#### Step 3: Set Up Your AI Assistant
-Now you need to tell your AI assistant where to find the research tool.
+✅ **80% reduction** in tool count (24 → 5)  
+✅ **Easier to remember** and use  
+✅ **More powerful** - multiple operations in single calls  
+✅ **Better performance** - fewer tool registrations  
+✅ **Easier maintenance** - less code duplication  
+✅ **Consistent interface** - similar parameter patterns  
 
-**For Claude Desktop:**
-1. Open Claude Desktop
-2. Go to Settings (gear icon)
-3. Find "MCP Servers" or "Tools"
-4. Click "Add Server"
-5. Choose "Custom"
-6. Set the path to: `scholarly-research-mcp`
-7. Save and restart Claude
+## Migration from Previous Version
 
-**For Cursor:**
-1. Open Cursor
-2. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
-3. Type "MCP" and select "MCP: Add Server"
-4. Choose "Custom"
-5. Set the path to: `scholarly-research-mcp`
-6. Restart Cursor
+The consolidated tools are **backward compatible** - you can still access the same functionality, just through fewer, more powerful tools. Each consolidated tool accepts parameters that let you specify exactly what you want to do.
 
-**For Other AI Assistants:**
-Look for settings related to "MCP", "Tools", "Servers", or "Custom Tools" in your AI assistant's settings.
+| Old Tool | New Tool | Notes |
+|----------|----------|-------|
+| `search_papers` | `research_search` | Use `sources: ["pubmed"]` |
+| `get_paper_by_id` | `paper_analysis` | Use `analysisType: "basic"` |
+| `get_full_text` | `paper_analysis` | Use `analysisType: "full-text"` |
+| `get_citation` | `citation_manager` | Use `action: "generate"` |
+| `set_source_preference` | `research_preferences` | Use `action: "set", category: "source"` |
 
-#### Step 4: Test It Out
-1. Restart your AI assistant
-2. Ask it: "Can you help me find research papers about climate change?"
-3. If it works, you'll see the AI assistant using the research tool to find papers for you!
+## Troubleshooting
 
-### Troubleshooting Setup
+### Common Issues
 
-**Problem: "Node.js is not recognized"**
-- Solution: Restart your computer after installing Node.js
+**Q: The tool doesn't start**
+A: Make sure you've run `npm install` and `npm run build` first.
 
-**Problem: "npm is not recognized"**
-- Solution: Restart your computer after installing Node.js
+**Q: My AI assistant can't find the tools**
+A: Check that the MCP server path is correct in your AI assistant's settings.
 
-**Problem: "Permission denied" when installing**
-- **Windows**: Run Command Prompt as Administrator
-- **Mac/Linux**: Add `sudo` before the command:
-  ```bash
-  sudo npm install -g scholarly-research-mcp
-  ```
+**Q: Searches return no results**
+A: Try different search terms or check if your sources are enabled in preferences.
 
-**Problem: AI assistant can't find the tool**
-- Make sure you typed the path exactly: `scholarly-research-mcp`
-- Try restarting your AI assistant
-- Check if the tool installed correctly by typing: `scholarly-research-mcp --version`
-
-### What Happens After Setup
-
-Once everything is working:
-- Your AI assistant will have access to 24 research tools
-- You can ask it to find papers, get citations, extract content, and more
-- The tool will remember your preferences and settings
-- You can search across PubMed, Google Scholar, and JSTOR
-
-### Getting Help with Setup
-
-If you're stuck:
-1. **Check the error message** - it usually tells you what's wrong
-2. **Make sure Node.js is installed** - type `node --version` to check
-3. **Try restarting your computer** - this fixes many setup issues
-4. **Ask for help** - open an issue on GitHub with your error message
-
-## How to Use
-
-### Basic Search
-Tell the tool what you're looking for:
-- "Find papers about climate change"
-- "Search for research on machine learning in healthcare"
-- "Get papers about COVID-19 vaccines published in 2023"
-
-### Get Paper Details
-Once you find a paper you're interested in:
-- Get the full abstract and author information
-- Read the complete paper text (when available)
-- Extract specific sections like Introduction, Methods, Results
-- Find quotes and statistics for your research
-
-### Save Your Preferences
-The tool remembers your settings:
-- Which databases to search (PubMed, Google Scholar, JSTOR)
-- How many results you want to see
-- How you want results displayed
-- Your preferred search order
-
-## What You Can Search
-
-### **PubMed** (Medical and Life Sciences)
-- Medical research papers
-- Biology and chemistry studies
-- Clinical trials and reviews
-- Free access to many papers
-
-### **Google Scholar** (All Academic Fields)
-- Papers from all academic disciplines
-- Books and theses
-- Citation information
-- Related research suggestions
-
-### **JSTOR** (Humanities and Social Sciences)
-- History and literature papers
-- Social science research
-- Economics and political science
-- Arts and culture studies
-
-## Examples of What You Can Do
-
-### For Students
-- Find sources for your research papers
-- Get proper citations in APA, MLA, or other formats
-- Extract key quotes and statistics
-- Understand complex research through section breakdowns
-
-### For Researchers
-- Discover related work in your field
-- Find supporting evidence for your arguments
-- Track citation counts and impact
-- Access full-text papers when available
-
-### For Writers and Journalists
-- Fact-check claims with academic sources
-- Find expert opinions and research
-- Build comprehensive bibliographies
-- Access primary research sources
-
-## Getting Help
-
-### If Something Doesn't Work
-1. **Check your internet connection** - The tool needs internet to search databases
-2. **Try different search terms** - Sometimes specific terms work better than general ones
-3. **Check if papers are available** - Not all papers have free full-text access
-4. **Contact support** - Open an issue on GitHub if you need help
-
-### Common Questions
-**Q: Why can't I read the full paper?**
-A: Some papers require subscriptions or institutional access. The tool shows you what's available for free.
-
-**Q: How do I cite a paper I found?**
+**Q: How do I get papers in a specific format?**
 A: Use the citation tools to get the paper in the format you need (APA, MLA, etc.).
 
-**Q: Can I save my search results?**
-A: Yes! The tool remembers your preferences and can export results for you.
+## Development
 
-## For Developers
-
-If you're a developer and want to contribute or integrate this tool:
-
+### Running Tests
 ```bash
-# Get the code
-git clone https://github.com/aringadre76/mcp-for-research.git
-cd mcp-for-research
-
-# Set it up
-npm install
-npm run build
-
-# Run tests
 npm run test:all-tools-bash
 ```
 
-## Support
+### Building
+```bash
+npm run build
+```
 
-- **GitHub Issues**: Report problems or request features
-- **Documentation**: See PROJECT_STRUCTURE.md for technical details
-- **Contributing**: Help improve the tool for everyone
+### Development Mode
+```bash
+npm run dev
+```
+
+## Contributing
+
+We welcome contributions! Please see our contributing guidelines and feel free to submit issues or pull requests.
 
 ## License
 
-This tool is free to use under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+If you need help:
+1. Check the troubleshooting section above
+2. Look at the documentation in the `docs/` folder
+3. Open an issue on GitHub
+4. Check the CHANGELOG.md for recent updates
+
+## Version History
+
+- **v2.0.0**: Consolidated 24 tools into 5 powerful tools
+- **v1.4.x**: Previous version with 24 individual tools
+- **v1.0.x**: Initial release
+
+---
+
+**Note**: This tool is designed to be easy to use while providing powerful research capabilities. The consolidated approach makes it simpler to use while maintaining all the functionality of the previous version.
