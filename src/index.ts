@@ -4,6 +4,8 @@ import { PubMedAdapter } from './adapters/pubmed';
 import { GoogleScholarAdapter } from './adapters/google-scholar';
 import { UnifiedSearchAdapter } from './adapters/unified-search';
 import { EnhancedUnifiedSearchAdapter } from './adapters/enhanced-unified-search';
+import { PreferenceAwareUnifiedSearchAdapter } from './adapters/preference-aware-unified-search';
+import { UserPreferencesManager } from './preferences/user-preferences';
 import { z } from 'zod';
 
 async function main() {
@@ -16,6 +18,8 @@ async function main() {
   const googleScholarAdapter = new GoogleScholarAdapter();
   const unifiedSearchAdapter = new UnifiedSearchAdapter();
   const enhancedUnifiedSearchAdapter = new EnhancedUnifiedSearchAdapter();
+  const preferenceAwareAdapter = new PreferenceAwareUnifiedSearchAdapter();
+  const preferencesManager = UserPreferencesManager.getInstance();
 
   mcpServer.tool(
     'search_papers',
@@ -1147,6 +1151,373 @@ Use the \`set_firecrawl_preference\` tool to switch between methods.`
             {
               type: 'text',
               text: `Error getting search method info: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_user_preferences',
+    'Get current user preferences for search and display settings',
+    {},
+    async () => {
+      try {
+        const preferences = preferencesManager.getPreferences();
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Current User Preferences**
+
+**Search Settings:**
+- Default Max Results: ${preferences.search.defaultMaxResults}
+- Default Sort By: ${preferences.search.defaultSortBy}
+- Prefer Firecrawl: ${preferences.search.preferFirecrawl}
+- Enable Deduplication: ${preferences.search.enableDeduplication}
+
+**Source Preferences:**
+${preferences.search.sources.map(source => 
+  `- ${source.name}: ${source.enabled ? 'enabled' : 'disabled'} (priority: ${source.priority}, max results: ${source.maxResults || 'default'})`
+).join('\n')}
+
+**Display Settings:**
+- Show Abstracts: ${preferences.display.showAbstracts}
+- Show Citations: ${preferences.display.showCitations}
+- Show URLs: ${preferences.display.showUrls}
+- Max Abstract Length: ${preferences.display.maxAbstractLength}
+
+**Cache Settings:**
+- Enabled: ${preferences.cache.enabled}
+- TTL Minutes: ${preferences.cache.ttlMinutes}
+
+To modify these preferences, use the set_source_preference, set_search_preferences, set_display_preferences, or set_cache_preferences tools.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error getting user preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'set_source_preference',
+    'Set preferences for a specific source (pubmed, google-scholar, jstor)',
+    {
+      sourceName: z.string().describe('Name of the source (pubmed, google-scholar, jstor)'),
+      enabled: z.boolean().optional().describe('Whether to enable this source'),
+      priority: z.number().optional().describe('Priority order (1 is highest priority)'),
+      maxResults: z.number().optional().describe('Maximum results to fetch from this source')
+    },
+    async ({ sourceName, enabled, priority, maxResults }) => {
+      try {
+        const validSources = ['pubmed', 'google-scholar', 'jstor'];
+        if (!validSources.includes(sourceName)) {
+          throw new Error(`Invalid source name. Must be one of: ${validSources.join(', ')}`);
+        }
+
+        const updates: any = {};
+        if (enabled !== undefined) updates.enabled = enabled;
+        if (priority !== undefined) updates.priority = priority;
+        if (maxResults !== undefined) updates.maxResults = maxResults;
+
+        preferencesManager.setSourcePreference(sourceName, updates);
+        
+        const updatedPrefs = preferencesManager.getPreferences();
+        const source = updatedPrefs.search.sources.find(s => s.name === sourceName);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Source Preference Updated**
+
+Source: ${sourceName}
+- Enabled: ${source?.enabled}
+- Priority: ${source?.priority}
+- Max Results: ${source?.maxResults || 'default'}
+
+The preferences have been saved and will be used for future searches.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error setting source preference: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'set_search_preferences',
+    'Set general search preferences',
+    {
+      defaultMaxResults: z.number().optional().describe('Default maximum number of results'),
+      defaultSortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Default sort order'),
+      preferFirecrawl: z.boolean().optional().describe('Prefer Firecrawl over Puppeteer for Google Scholar'),
+      enableDeduplication: z.boolean().optional().describe('Enable deduplication of results across sources')
+    },
+    async ({ defaultMaxResults, defaultSortBy, preferFirecrawl, enableDeduplication }) => {
+      try {
+        const updates: any = {};
+        if (defaultMaxResults !== undefined) updates.defaultMaxResults = defaultMaxResults;
+        if (defaultSortBy !== undefined) updates.defaultSortBy = defaultSortBy;
+        if (preferFirecrawl !== undefined) updates.preferFirecrawl = preferFirecrawl;
+        if (enableDeduplication !== undefined) updates.enableDeduplication = enableDeduplication;
+
+        preferencesManager.updateSearchPreferences(updates);
+        
+        const updatedPrefs = preferencesManager.getPreferences().search;
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Search Preferences Updated**
+
+- Default Max Results: ${updatedPrefs.defaultMaxResults}
+- Default Sort By: ${updatedPrefs.defaultSortBy}
+- Prefer Firecrawl: ${updatedPrefs.preferFirecrawl}
+- Enable Deduplication: ${updatedPrefs.enableDeduplication}
+
+The preferences have been saved and will be used for future searches.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error setting search preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'set_display_preferences',
+    'Set display preferences for search results',
+    {
+      showAbstracts: z.boolean().optional().describe('Whether to show abstracts in results'),
+      showCitations: z.boolean().optional().describe('Whether to show citation counts'),
+      showUrls: z.boolean().optional().describe('Whether to show URLs'),
+      maxAbstractLength: z.number().optional().describe('Maximum length of abstracts to display')
+    },
+    async ({ showAbstracts, showCitations, showUrls, maxAbstractLength }) => {
+      try {
+        const updates: any = {};
+        if (showAbstracts !== undefined) updates.showAbstracts = showAbstracts;
+        if (showCitations !== undefined) updates.showCitations = showCitations;
+        if (showUrls !== undefined) updates.showUrls = showUrls;
+        if (maxAbstractLength !== undefined) updates.maxAbstractLength = maxAbstractLength;
+
+        preferencesManager.updateDisplayPreferences(updates);
+        
+        const updatedPrefs = preferencesManager.getPreferences().display;
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Display Preferences Updated**
+
+- Show Abstracts: ${updatedPrefs.showAbstracts}
+- Show Citations: ${updatedPrefs.showCitations}
+- Show URLs: ${updatedPrefs.showUrls}
+- Max Abstract Length: ${updatedPrefs.maxAbstractLength}
+
+The preferences have been saved and will affect how search results are displayed.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error setting display preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'search_with_preferences',
+    'Search for papers using your saved preferences',
+    {
+      query: z.string().describe('Search query for papers'),
+      maxResults: z.number().optional().describe('Override max results (uses preference if not specified)'),
+      overrideSources: z.array(z.string()).optional().describe('Override enabled sources for this search'),
+      respectUserPreferences: z.boolean().optional().describe('Whether to respect user preferences (default: true)')
+    },
+    async ({ query, maxResults, overrideSources, respectUserPreferences = true }) => {
+      try {
+        const papers = await preferenceAwareAdapter.searchPapers({
+          query,
+          maxResults,
+          overrideSources,
+          respectUserPreferences
+        });
+
+        if (papers.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'No papers found matching your search criteria with current preferences.'
+              }
+            ]
+          };
+        }
+
+        const resultsText = preferenceAwareAdapter.formatResults(papers);
+        const enabledSources = preferencesManager.getEnabledSources().map(s => s.name);
+        const actualSources = overrideSources || enabledSources;
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Found ${papers.length} papers using your preferences (sources: ${actualSources.join(', ')}):\n\n${resultsText}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error searching with preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'reset_preferences',
+    'Reset all preferences to default values',
+    {},
+    async () => {
+      try {
+        preferencesManager.resetToDefaults();
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Preferences Reset to Defaults**
+
+All user preferences have been reset to their default values:
+
+- Default max results: 20
+- Default sort: relevance
+- Prefer Firecrawl: true
+- Deduplication: enabled
+- All sources enabled with default priorities
+- All display options enabled
+
+Use get_user_preferences to see the complete default configuration.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error resetting preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'export_preferences',
+    'Export current preferences as JSON',
+    {},
+    async () => {
+      try {
+        const json = preferencesManager.exportPreferences();
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Exported Preferences (JSON)**
+
+\`\`\`json
+${json}
+\`\`\`
+
+You can save this JSON and import it later using the import_preferences tool.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error exporting preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'import_preferences',
+    'Import preferences from JSON',
+    {
+      preferencesJson: z.string().describe('JSON string containing preferences to import')
+    },
+    async ({ preferencesJson }) => {
+      try {
+        preferencesManager.importPreferences(preferencesJson);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Preferences Imported Successfully**
+
+Your preferences have been updated from the provided JSON.
+Use get_user_preferences to see the current configuration.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error importing preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
           ]
         };

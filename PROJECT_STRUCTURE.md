@@ -2,51 +2,51 @@
 
 This document outlines the organization and structure of the Scholarly Research MCP Server project.
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 scholarly-research-mcp/
-├── 📁 src/                          # Source code
-│   ├── 📄 index.ts                  # Main server entry point
-│   └── 📁 adapters/                 # Data source adapters
-│       ├── 📄 pubmed.ts             # PubMed API integration
-│       ├── 📄 google-scholar.ts     # Google Scholar web scraping
-│       ├── 📄 google-scholar-firecrawl.ts # Firecrawl MCP integration
-│       ├── 📄 unified-search.ts     # Basic unified search
-│       └── 📄 enhanced-unified-search.ts # Enhanced unified search
-├── 📁 tests/                        # Test suites
-│   ├── 📄 README.md                 # Test documentation
-│   ├── 📄 test-all-tools-simple.sh # Bash test runner (recommended)
-│   ├── 📄 test_all_tools.py        # Python test runner
-│   ├── 📄 test-all-tools.js        # Node.js test runner
-│   ├── 📄 test-firecrawl-integration.js # Firecrawl tests
-│   ├── 📄 test-google-scholar.js   # Google Scholar tests
-│   ├── 📄 test-simple-google-scholar.js # Simple GS tests
-│   ├── 📄 test-unified-search.js   # Unified search tests
-│   ├── 📄 test-citations.js        # Citation tests
-│   └── 📄 jest.setup.js            # Jest configuration
-├── 📁 scripts/                      # Utility scripts
-│   ├── 📄 test-mcp-tool.js         # MCP tool testing
-│   ├── 📄 publish-both.js          # Dual registry publishing
-│   └── 📄 version.js               # Version management
-├── 📁 docs/                         # Documentation
-│   ├── 📄 GITHUB_ACTIONS_SETUP.md  # GitHub Actions guide
-│   └── 📄 CURSOR_SETUP.md          # Cursor IDE setup
-├── 📁 .github/                      # GitHub configuration
-│   └── 📁 workflows/                # GitHub Actions
-│       └── 📄 publish.yml           # Automated publishing
-├── 📁 dist/                         # Built output (generated)
-├── 📄 package.json                  # Project configuration
-├── 📄 package-lock.json             # Dependency lock file
-├── 📄 tsconfig.json                 # TypeScript configuration
-├── 📄 .npmignore                    # NPM package exclusions
-├── 📄 .gitignore                    # Git exclusions
-├── 📄 .npmrc                        # NPM configuration
-├── 📄 README.md                     # Main documentation
-└── 📄 PROJECT_STRUCTURE.md          # This file
+├── src/                          # Source code
+│   ├── index.ts                  # Main server entry point
+│   └── adapters/                 # Data source adapters
+│       ├── pubmed.ts             # PubMed API integration
+│       ├── google-scholar.ts     # Google Scholar web scraping
+│       ├── google-scholar-firecrawl.ts # Firecrawl MCP integration
+│       ├── unified-search.ts     # Basic unified search
+│       └── enhanced-unified-search.ts # Enhanced unified search
+├── tests/                        # Test suites
+│   ├── README.md                 # Test documentation
+│   ├── test-all-tools-simple.sh # Bash test runner (recommended)
+│   ├── test_all_tools.py        # Python test runner
+│   ├── test-all-tools.js        # Node.js test runner
+│   ├── test-firecrawl-integration.js # Firecrawl tests
+│   ├── test-google-scholar.js   # Google Scholar tests
+│   ├── test-simple-google-scholar.js # Simple GS tests
+│   ├── test-unified-search.js   # Unified search tests
+│   ├── test-citations.js        # Citation tests
+│   └── jest.setup.js            # Jest configuration
+├── scripts/                      # Utility scripts
+│   ├── test-mcp-tool.js         # MCP tool testing
+│   ├── publish-both.js          # Dual registry publishing
+│   └── version.js               # Release management
+├── docs/                         # Documentation
+│   ├── GITHUB_ACTIONS_SETUP.md  # GitHub Actions guide
+│   └── CURSOR_SETUP.md          # Cursor IDE setup
+├── .github/                      # GitHub configuration
+│   └── workflows/                # GitHub Actions
+│       └── publish.yml           # Automated publishing
+├── dist/                         # Built output (generated)
+├── package.json                  # Project configuration
+├── package-lock.json             # Dependency lock file
+├── tsconfig.json                 # TypeScript configuration
+├── .npmignore                    # NPM package exclusions
+├── .gitignore                    # Git exclusions
+├── .npmrc                        # NPM configuration
+├── README.md                     # Main documentation
+└── PROJECT_STRUCTURE.md          # This file
 ```
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### **Core Components**
 
@@ -75,7 +75,7 @@ scholarly-research-mcp/
 User Request → MCP Server → Adapter Selection → Data Source → Response Processing → User Response
 ```
 
-## 🔧 Configuration Files
+## Configuration Files
 
 ### **Package Configuration**
 - `package.json`: Project metadata, dependencies, scripts
@@ -93,7 +93,7 @@ User Request → MCP Server → Adapter Selection → Data Source → Response P
 - `.github/`: GitHub-specific configuration
 - Workflows for automated testing and publishing
 
-## 📦 Build and Distribution
+## Build and Distribution
 
 ### **Build Process**
 1. **TypeScript Compilation**: `src/` → `dist/`
@@ -106,7 +106,7 @@ User Request → MCP Server → Adapter Selection → Data Source → Response P
 - **Types**: TypeScript definitions
 - **Excluded**: Tests, docs, scripts, source code
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 ### **Test Coverage**
 - **Unit Tests**: Individual adapter functionality
@@ -120,12 +120,12 @@ User Request → MCP Server → Adapter Selection → Data Source → Response P
 - **JavaScript**: `npm run test:all-tools-js`
 - **Individual**: `npm run test:[component]`
 
-## 🚀 Deployment
+## Deployment
 
 ### **NPM Publishing**
 - **Registry**: npmjs.com (public)
 - **Package**: `scholarly-research-mcp`
-- **Versioning**: Semantic versioning
+- **Release Management**: Automated release process
 - **Automation**: GitHub Actions workflow
 
 ### **Installation Methods**
@@ -166,7 +166,7 @@ npm run build
 4. Publish to npm: `npm publish`
 5. Create GitHub release
 
-## 📚 Documentation
+## Documentation
 
 ### **User Documentation**
 - `README.md`: Main project documentation
@@ -180,15 +180,15 @@ npm run build
 - `docs/`: Additional setup guides
 - Code comments and JSDoc
 
-## 🎯 Project Goals
+## Project Goals
 
 ### **Current Status**
-- ✅ PubMed integration complete
-- ✅ Google Scholar integration complete
-- ✅ Firecrawl MCP integration complete
-- ✅ Unified search functionality
-- ✅ Comprehensive testing suite
-- ✅ NPM package published
+- PubMed integration complete
+- Google Scholar integration complete
+- Firecrawl MCP integration complete
+- Unified search functionality
+- Comprehensive testing suite
+- NPM package published
 
 ### **Future Enhancements**
 - 🔄 JSTOR integration
@@ -196,7 +196,7 @@ npm run build
 - 🔄 Performance optimization
 - 🔄 Additional data sources
 
-## 🤝 Contributing
+## Contributing
 
 ### **Development Setup**
 1. Fork the repository

@@ -22,6 +22,7 @@
     "test:all-tools-js": "node tests/test-all-tools.js",
     "test:all": "npm run build && npm run test:pubmed && npm run test:mcp && npm run test:citations && npm run test:google-scholar && npm run test:unified",
     "test:content": "node tests/test-content-extraction.js",
+    "test:preferences": "node tests/test-preferences.js",
     "cursor": "node scripts/cursor-mcp-client.js",
     "version:patch": "node scripts/version.js patch",
     "version:minor": "node scripts/version.js minor",

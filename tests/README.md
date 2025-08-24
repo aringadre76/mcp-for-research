@@ -2,7 +2,7 @@
 
 This directory contains comprehensive test suites to ensure the reliability and functionality of the MCP server.
 
-## 🧪 Available Test Suites
+## Available Test Suites
 
 ### **Bash Test Suite** (Recommended)
 ```bash
@@ -45,7 +45,7 @@ npm run test:unified
 npm run test:firecrawl
 ```
 
-## 📁 Test Files
+## Test Files
 
 ### **Core Test Suites**
 - `test-all-tools-simple.sh` - Bash test runner (recommended)
@@ -60,17 +60,17 @@ npm run test:firecrawl
 - `test-citations.js` - Citation handling
 - `jest.setup.js` - Jest configuration
 
-## 🎯 Test Coverage
+## Test Coverage
 
-- ✅ **13/13 tests passing**
-- ✅ Basic functionality validation
-- ✅ Adapter instantiation testing
-- ✅ Data validation and file checks
-- ✅ Google Scholar scraping verification
-- ✅ Unified search functionality
-- ✅ Firecrawl integration testing
+- **13/13 tests passing**
+- Basic functionality validation
+- Adapter instantiation testing
+- Data validation and file checks
+- Google Scholar scraping verification
+- Unified search functionality
+- Firecrawl integration testing
 
-## 🚀 Running Tests
+## Running Tests
 
 ### **Quick Start**
 ```bash
@@ -102,7 +102,7 @@ All test suites generate detailed reports:
 - **Python**: JSON reports with detailed results
 - **JavaScript**: JSON reports with performance metrics
 
-## 🔧 Configuration
+## Configuration
 
 ### **Jest Configuration**
 - Configured in `jest.setup.js`
@@ -117,7 +117,7 @@ All test suites generate detailed reports:
 ## 🐛 Troubleshooting
 
 ### **Common Issues**
-1. **Node.js Version**: Ensure Node.js 18+ is installed
+1. **Node.js**: Ensure Node.js 18+ is installed
 2. **Dependencies**: Run `npm install` before testing
 3. **Build**: Ensure `npm run build` completes successfully
 4. **Permissions**: Make test scripts executable with `chmod +x`
@@ -138,7 +138,7 @@ The test suites are designed to work with CI/CD pipelines:
 - **Exit Codes**: Proper exit codes for CI integration
 - **Report Generation**: Structured output for CI tools
 
-## 🤝 Contributing
+## Contributing
 
 When adding new features:
 1. **Add Tests**: Include tests for new functionality
