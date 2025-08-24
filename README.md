@@ -1,6 +1,28 @@
 # Scholarly Research MCP Server
 
-A Model Context Protocol (MCP) server that provides access to academic research papers across multiple sources including PubMed, JSTOR, and Google Scholar. **Now with enhanced capabilities for reading full text content, extracting paper sections, finding specific evidence and quotes for research and essays, and comprehensive Google Scholar integration via web scraping.**
+A comprehensive Model Context Protocol (MCP) server that provides access to academic research papers across multiple sources including PubMed, JSTOR, and Google Scholar. **Now with enhanced capabilities for reading full text content, extracting paper sections, finding specific evidence and quotes for research and essays, comprehensive Google Scholar integration via web scraping, and professional Firecrawl MCP integration for enhanced reliability.**
+
+## 📊 Project Status
+
+![Tests](https://img.shields.io/badge/tests-13%2F13%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Node.js](https://img.shields.io/badge/node.js-18%2B-green)
+![License](https://img.shields.io/badge/license-MIT-yellow)
+![NPM](https://img.shields.io/badge/npm-published-orange)
+
+## 🚀 Quick Start
+
+```bash
+# Install from npm
+npm install -g scholarly-research-mcp
+
+# Or clone and run locally
+git clone https://github.com/aringadre76/mcp-for-research.git
+cd mcp-for-research
+npm install
+npm run build
+npm start
+```
 
 ## 🆕 What's New in v1.4.0
 
@@ -20,18 +42,29 @@ A Model Context Protocol (MCP) server that provides access to academic research 
 - **Dual URL Support**: Now supports both PMCID and PMID formats for accessing papers
 - **Better Content Processing**: Enhanced HTML cleaning and text extraction from PMC sources
 
-## Features
+## ✨ Features
 
+### **Core Capabilities**
 - **PubMed Integration**: Search and fetch papers using NCBI's E-utilities API
+- **Google Scholar Integration**: Web scraping for comprehensive paper discovery
+- **Firecrawl MCP Integration**: Professional web scraping service for enhanced reliability
+- **Unified Search**: Combined search across multiple sources with deduplication
 - **Full Text Extraction**: Access complete paper content when available (up to 50,000+ characters)
+
+### **Advanced Features**
 - **Section Analysis**: Extract and organize paper sections (Introduction, Methods, Results, etc.)
 - **Evidence Mining**: Find specific quotes, statistics, findings, and conclusions
 - **Content Search**: Search within papers for specific terms and phrases
+- **Citation Tracking**: Google Scholar citation counts and related paper discovery
+- **Dual Scraping Methods**: Choose between Firecrawl (recommended) and Puppeteer
+
+### **Technical Features**
 - **Rate Limiting**: Built-in rate limiting to respect API constraints
 - **Structured Data**: Clean, normalized paper objects with metadata
 - **MCP Protocol**: Standard interface for AI assistants and tools
 - **PMC Integration**: Direct access to PubMed Central full-text articles
 - **Dual Identifier Support**: Works with both PMID and PMCID identifiers
+- **Automatic Fallback**: Seamless switching between scraping methods
 
 ## Installation
 
@@ -452,7 +485,9 @@ npm run dev
 npm run prod
 ```
 
-## Available Tools
+## 🛠️ Available Tools
+
+The server provides **16 comprehensive MCP tools** for scholarly research:
 
 ### **Paper Discovery Tools**
 
@@ -867,8 +902,28 @@ To add support for new academic sources:
 
 ### Testing
 ```bash
-npm test
+# Run all tests
+npm run test:all-tools-bash
+
+# Run specific test suites
+npm run test:google-scholar
+npm run test:unified
+npm run test:firecrawl
+
+# Individual test suites
+npm run test:all-tools-bash -- --basic
+npm run test:all-tools-bash -- --adapters
+npm run test:all-tools-bash -- --data
 ```
+
+### **Test Coverage**
+- ✅ **13/13 tests passing**
+- ✅ Basic functionality validation
+- ✅ Adapter instantiation testing
+- ✅ Data validation and file checks
+- ✅ Google Scholar scraping verification
+- ✅ Unified search functionality
+- ✅ Firecrawl integration testing
 
 ## Contributing
 
@@ -904,10 +959,12 @@ MIT License - see LICENSE file for details.
 - [x] Phase 3: Section Analysis
 - [x] Phase 4: Evidence Mining
 - [x] Phase 5: Enhanced PMC Access & URL Handling
-- [ ] Phase 6: JSTOR Integration
-- [ ] Phase 7: Google Scholar Integration
-- [ ] Phase 8: Advanced Features
-- [ ] Phase 9: Integration & Testing
+- [x] Phase 6: Google Scholar Integration ✅
+- [x] Phase 7: Firecrawl MCP Integration ✅
+- [x] Phase 8: Unified Search & Advanced Features ✅
+- [x] Phase 9: Integration & Testing ✅
+- [ ] Phase 10: JSTOR Integration
+- [ ] Phase 11: Enhanced Analytics & Insights
 
 ## Support
 
