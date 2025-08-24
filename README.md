@@ -52,8 +52,12 @@ src/
 ### **Documentation**
 ```
 docs/
-├── ARCHITECTURE.md                    # Technical system design
+├── README.md                          # Documentation index and overview
+├── CONSOLIDATION_GUIDE.md             # Complete consolidation guide
+├── TOOL_CONSOLIDATION.md              # Quick tool mapping reference
+├── PROJECT_STRUCTURE.md               # Clean project organization
 ├── API_REFERENCE.md                   # Complete API documentation
+├── ARCHITECTURE.md                    # Technical system design
 ├── DATA_MODELS.md                     # Data structure definitions
 ├── DEVELOPMENT.md                     # Developer setup guide
 └── TROUBLESHOOTING.md                 # Problem-solving guide
@@ -270,6 +274,16 @@ We welcome contributions! Please see our contributing guidelines and feel free t
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Documentation
+
+For comprehensive documentation, guides, and technical details, see the [`docs/`](./docs/) directory:
+
+- **[Documentation Overview](./docs/README.md)** - Complete documentation index
+- **[Consolidation Guide](./docs/CONSOLIDATION_GUIDE.md)** - Detailed explanation of the new approach
+- **[Tool Reference](./docs/TOOL_CONSOLIDATION.md)** - Quick mapping from old to new tools
+- **[API Reference](./docs/API_REFERENCE.md)** - Complete tool documentation
+- **[Project Structure](./docs/PROJECT_STRUCTURE.md)** - Clean project organization
 
 ## Support
 
