@@ -16,6 +16,64 @@ This tool helps you:
 - **Search within papers** to find specific information
 - **Organize research** with customizable preferences
 
+## Project Structure
+
+This tool is organized into several key components:
+
+### **Core Components**
+```
+src/
+├── index.ts                           # Main server entry point
+├── adapters/                          # Data source connectors
+│   ├── pubmed.ts                      # PubMed API integration
+│   ├── google-scholar.ts              # Google Scholar web scraping
+│   ├── google-scholar-firecrawl.ts    # Firecrawl integration
+│   ├── unified-search.ts              # Basic multi-source search
+│   ├── enhanced-unified-search.ts     # Advanced multi-source search
+│   └── preference-aware-unified-search.ts # User preference integration
+├── preferences/                       # User preference management
+│   └── user-preferences.ts            # Preference storage and retrieval
+└── models/                            # Data structures and interfaces
+    ├── paper.ts                       # Paper data models
+    ├── search.ts                      # Search parameter models
+    └── preferences.ts                 # Preference models
+```
+
+### **Documentation**
+```
+docs/
+├── ARCHITECTURE.md                    # Technical system design
+├── API_REFERENCE.md                   # Complete API documentation
+├── DATA_MODELS.md                     # Data structure definitions
+├── DEVELOPMENT.md                     # Developer setup guide
+└── TROUBLESHOOTING.md                 # Problem-solving guide
+```
+
+### **Testing**
+```
+tests/
+├── test-preferences.js                # Preference system tests
+├── test-all-tools-simple.sh           # Bash test runner
+├── test_all_tools.py                  # Python test runner
+└── test-all-tools.js                  # JavaScript test runner
+```
+
+### **Configuration**
+```
+├── package.json                       # Project dependencies and scripts
+├── tsconfig.json                      # TypeScript configuration
+├── .env.example                       # Environment variables template
+└── README.md                          # This file
+```
+
+### **Key Features**
+- **24 MCP Tools**: Complete set of research tools
+- **Multi-Source Search**: PubMed, Google Scholar, and JSTOR
+- **User Preferences**: Customizable search and display settings
+- **Content Extraction**: Full-text paper access and analysis
+- **Citation Management**: Multiple citation format support
+- **Error Handling**: Robust fallback mechanisms
+
 ## Quick Start
 
 ### Option 1: Use the Online Version (Easiest)
