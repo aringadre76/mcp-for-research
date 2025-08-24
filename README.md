@@ -925,7 +925,22 @@ npm run test:all-tools-bash -- --data
 - ✅ Unified search functionality
 - ✅ Firecrawl integration testing
 
-## Contributing
+## 📚 Documentation
+
+### **User Documentation**
+- `README.md`: Main project documentation
+- `CHANGELOG.md`: Version history and migration guide
+- Installation and usage instructions
+- Feature descriptions and examples
+- Troubleshooting guide
+
+### **Developer Documentation**
+- `PROJECT_STRUCTURE.md`: Complete project architecture and organization
+- `tests/README.md`: Comprehensive testing documentation
+- `docs/`: Additional setup guides and workflows
+- Code comments and JSDoc
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -939,18 +954,21 @@ MIT License - see LICENSE file for details.
 
 ## 📋 Changelog
 
-### v1.3.0 (Latest)
-- **Fixed PMC URL Issues**: Corrected base URL from `www.ncbi.nlm.nih.gov/pmc` to `pmc.ncbi.nlm.nih.gov`
-- **Added PMID-based URL Support**: Now supports both PMCID and PMID formats for full text access
-- **Increased Default Text Length**: Default `maxLength` increased from 5,000 to 50,000 characters
-- **Enhanced Content Processing**: Better HTML cleaning and text extraction from PMC sources
-- **Improved Section Detection**: Better algorithms for identifying and organizing paper sections
-- **Fallback Logic**: Added automatic fallback between PMCID and PMID access methods
+For detailed version history, see [CHANGELOG.md](CHANGELOG.md).
 
-### v1.2.3
-- Initial release with basic PubMed integration
-- Full text extraction capabilities
-- Section analysis and evidence mining
+### Recent Highlights
+
+#### v1.4.0 (Latest)
+- **Google Scholar Integration**: Full web scraping support
+- **Firecrawl MCP Integration**: Professional web scraping service
+- **Unified Search**: Combined search across multiple sources
+- **Enhanced Testing**: Comprehensive test suites with 13/13 tests passing
+
+#### v1.3.0
+- **Fixed PMC URL Issues**: Corrected PubMed Central URL handling
+- **Enhanced Full Text Retrieval**: Increased to 50,000 characters
+- **Improved Section Extraction**: Better algorithms for paper sections
+- **Dual URL Support**: Both PMCID and PMID formats
 
 ## Roadmap
 
