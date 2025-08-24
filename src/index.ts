@@ -1,6 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PubMedAdapter } from './adapters/pubmed';
+import { GoogleScholarAdapter } from './adapters/google-scholar';
+import { UnifiedSearchAdapter } from './adapters/unified-search';
+import { EnhancedUnifiedSearchAdapter } from './adapters/enhanced-unified-search';
 import { z } from 'zod';
 
 async function main() {
@@ -10,6 +13,9 @@ async function main() {
   });
 
   const pubmedAdapter = new PubMedAdapter();
+  const googleScholarAdapter = new GoogleScholarAdapter();
+  const unifiedSearchAdapter = new UnifiedSearchAdapter();
+  const enhancedUnifiedSearchAdapter = new EnhancedUnifiedSearchAdapter();
 
   mcpServer.tool(
     'search_papers',
@@ -707,6 +713,440 @@ Citations: ${citationCount}`
             {
               type: 'text',
               text: `Error fetching citation count: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'search_google_scholar',
+    'Search for academic papers on Google Scholar',
+    {
+      query: z.string().describe('Search query for papers'),
+      maxResults: z.number().optional().describe('Maximum number of results (default: 20)'),
+      startYear: z.number().optional().describe('Start year for publication range'),
+      endYear: z.number().optional().describe('End year for publication range'),
+      sortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Sort order (default: relevance)')
+    },
+    async ({ query, maxResults = 20, startYear, endYear, sortBy = 'relevance' }) => {
+      try {
+        const papers = await googleScholarAdapter.searchPapers({
+          query,
+          maxResults,
+          startYear,
+          endYear,
+          sortBy
+        });
+
+        if (papers.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'No papers found on Google Scholar matching your search criteria.'
+              }
+            ]
+          };
+        }
+
+        const resultsText = papers.map((paper, index) => {
+          const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown authors';
+          const pdfInfo = paper.pdfUrl ? `\n   - PDF: ${paper.pdfUrl}` : '';
+          const citationsInfo = paper.citations > 0 ? `\n   - Citations: ${paper.citations}` : '';
+          
+          return `${index + 1}. **${paper.title}**
+   - Authors: ${authors}
+   - Journal: ${paper.journal}
+   - Publication Date: ${paper.publicationDate}
+   - URL: ${paper.url}${pdfInfo}${citationsInfo}
+   ${paper.abstract ? `- Abstract: ${paper.abstract.substring(0, 200)}...` : ''}
+`;
+        }).join('\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Found ${papers.length} papers on Google Scholar:\n\n${resultsText}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error searching Google Scholar: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'search_all_sources',
+    'Search for academic papers across both PubMed and Google Scholar',
+    {
+      query: z.string().describe('Search query for papers'),
+      maxResults: z.number().optional().describe('Maximum number of results (default: 20)'),
+      startDate: z.string().optional().describe('Start date for publication range (YYYY/MM/DD format)'),
+      endDate: z.number().optional().describe('End year for publication range'),
+      journal: z.string().optional().describe('Filter by specific journal'),
+      author: z.string().optional().describe('Filter by specific author'),
+      sources: z.array(z.enum(['pubmed', 'google-scholar'])).optional().describe('Sources to search (default: both)'),
+      sortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Sort order (default: relevance)')
+    },
+    async ({ query, maxResults = 20, startDate, endDate, journal, author, sources, sortBy = 'relevance' }) => {
+      try {
+        const papers = await unifiedSearchAdapter.searchPapers({
+          query,
+          maxResults,
+          startDate,
+          endDate,
+          journal,
+          author,
+          sources,
+          sortBy
+        });
+
+        if (papers.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'No papers found across all sources matching your search criteria.'
+              }
+            ]
+          };
+        }
+
+        const resultsText = papers.map((paper, index) => {
+          const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown authors';
+          const sourceInfo = `\n   - Source: ${paper.source}`;
+          const pmidInfo = paper.pmid ? `\n   - PMID: ${paper.pmid}` : '';
+          const pmcInfo = paper.pmcid ? `\n   - PMC ID: ${paper.pmcid} (Full text likely available)` : '';
+          const doiInfo = paper.doi ? `\n   - DOI: ${paper.doi}` : '';
+          const urlInfo = paper.url ? `\n   - URL: ${paper.url}` : '';
+          const pdfInfo = paper.pdfUrl ? `\n   - PDF: ${paper.pdfUrl}` : '';
+          const citationsInfo = paper.citations > 0 ? `\n   - Citations: ${paper.citations}` : '';
+          
+          return `${index + 1}. **${paper.title}**
+   - Authors: ${authors}
+   - Journal: ${paper.journal}
+   - Publication Date: ${paper.publicationDate}${sourceInfo}${pmidInfo}${pmcInfo}${doiInfo}${urlInfo}${pdfInfo}${citationsInfo}
+   ${paper.abstract ? `- Abstract: ${paper.abstract.substring(0, 200)}...` : ''}
+`;
+        }).join('\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Found ${papers.length} papers across all sources:\n\n${resultsText}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error searching all sources: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_google_scholar_citations',
+    'Get citation count for a paper from Google Scholar',
+    {
+      title: z.string().describe('Title of the paper to search for')
+    },
+    async ({ title }) => {
+      try {
+        const citationCount = await googleScholarAdapter.getCitationCount(title);
+        
+        if (citationCount === null) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Citation count not available for: "${title}"`
+              }
+            ]
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Google Scholar Citation Count**
+Paper: "${title}"
+Citations: ${citationCount}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error fetching citation count: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_related_papers',
+    'Get related papers from either PubMed or Google Scholar',
+    {
+      identifier: z.string().describe('Paper identifier (PMID for PubMed, URL for Google Scholar)'),
+      source: z.enum(['pubmed', 'google-scholar']).describe('Source to search for related papers'),
+      maxResults: z.number().optional().describe('Maximum number of related papers (default: 10)')
+    },
+    async ({ identifier, source, maxResults = 10 }) => {
+      try {
+        const relatedPapers = await unifiedSearchAdapter.getRelatedPapers(identifier, source, maxResults);
+        
+        if (relatedPapers.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No related papers found for ${source} identifier: ${identifier}`
+              }
+            ]
+          };
+        }
+
+        const resultsText = relatedPapers.map((paper, index) => {
+          const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown authors';
+          const sourceInfo = `\n   - Source: ${paper.source}`;
+          const pmidInfo = paper.pmid ? `\n   - PMID: ${paper.pmid}` : '';
+          const urlInfo = paper.url ? `\n   - URL: ${paper.url}` : '';
+          const pdfInfo = paper.pdfUrl ? `\n   - PDF: ${paper.pdfUrl}` : '';
+          const citationsInfo = paper.citations > 0 ? `\n   - Citations: ${paper.citations}` : '';
+          
+          return `${index + 1}. **${paper.title}**
+   - Authors: ${authors}
+   - Journal: ${paper.journal}
+   - Publication Date: ${paper.publicationDate}${sourceInfo}${pmidInfo}${urlInfo}${pdfInfo}${citationsInfo}
+   ${paper.abstract ? `- Abstract: ${paper.abstract.substring(0, 200)}...` : ''}
+`;
+        }).join('\n');
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Related Papers from ${source}**
+Found ${relatedPapers.length} related papers:
+
+${resultsText}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error fetching related papers: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'search_with_firecrawl',
+    'Search for academic papers using Firecrawl MCP server (more reliable than Puppeteer)',
+    {
+      query: z.string().describe('Search query for papers'),
+      maxResults: z.number().optional().describe('Maximum number of results (default: 20)'),
+      startDate: z.string().optional().describe('Start date for publication range (YYYY/MM/DD format)'),
+      endDate: z.number().optional().describe('End year for publication range'),
+      journal: z.string().optional().describe('Filter by specific journal'),
+      author: z.string().optional().describe('Filter by specific author'),
+      sources: z.array(z.enum(['pubmed', 'google-scholar'])).optional().describe('Sources to search (default: both)'),
+      sortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Sort order (default: relevance)'),
+      preferFirecrawl: z.boolean().optional().describe('Prefer Firecrawl over Puppeteer for Google Scholar (default: true)')
+    },
+    async ({ query, maxResults = 20, startDate, endDate, journal, author, sources, sortBy = 'relevance', preferFirecrawl = true }) => {
+      try {
+        const papers = await enhancedUnifiedSearchAdapter.searchPapers({
+          query,
+          maxResults,
+          startDate,
+          endDate,
+          journal,
+          author,
+          sources,
+          sortBy,
+          preferFirecrawl
+        });
+
+        if (papers.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'No papers found across all sources matching your search criteria.'
+              }
+            ]
+          };
+        }
+
+        const resultsText = papers.map((paper, index) => {
+          const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'Unknown authors';
+          const sourceInfo = `\n   - Source: ${paper.source}`;
+          const searchMethodInfo = paper.searchMethod ? `\n   - Search Method: ${paper.searchMethod}` : '';
+          const pmidInfo = paper.pmid ? `\n   - PMID: ${paper.pmid}` : '';
+          const pmcInfo = paper.pmcid ? `\n   - PMC ID: ${paper.pmcid} (Full text likely available)` : '';
+          const doiInfo = paper.doi ? `\n   - DOI: ${paper.doi}` : '';
+          const urlInfo = paper.url ? `\n   - URL: ${paper.url}` : '';
+          const pdfInfo = paper.pdfUrl ? `\n   - PDF: ${paper.pdfUrl}` : '';
+          const citationsInfo = paper.citations > 0 ? `\n   - Citations: ${paper.citations}` : '';
+          
+          return `${index + 1}. **${paper.title}**
+   - Authors: ${authors}
+   - Journal: ${paper.journal}
+   - Publication Date: ${paper.publicationDate}${sourceInfo}${searchMethodInfo}${pmidInfo}${pmcInfo}${doiInfo}${urlInfo}${pdfInfo}${citationsInfo}
+   ${paper.abstract ? `- Abstract: ${paper.abstract.substring(0, 200)}...` : ''}
+`;
+        }).join('');
+
+        const searchMethod = enhancedUnifiedSearchAdapter.getSearchMethod();
+        const firecrawlStatus = enhancedUnifiedSearchAdapter.isFirecrawlAvailable() ? 'enabled' : 'disabled';
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Enhanced Search Results (${searchMethod} method, Firecrawl: ${firecrawlStatus})**
+Found ${papers.length} papers across all sources:
+
+${resultsText}
+
+**Search Method**: ${searchMethod}
+**Firecrawl Status**: ${firecrawlStatus}
+**Note**: Firecrawl provides more reliable web scraping than Puppeteer.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error performing enhanced search: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'set_firecrawl_preference',
+    'Set whether to prefer Firecrawl over Puppeteer for Google Scholar searches',
+    {
+      preferFirecrawl: z.boolean().describe('Whether to prefer Firecrawl over Puppeteer')
+    },
+    async ({ preferFirecrawl }) => {
+      try {
+        enhancedUnifiedSearchAdapter.setPreferFirecrawl(preferFirecrawl);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Firecrawl Preference Updated**
+Preference set to: ${preferFirecrawl ? 'Firecrawl (recommended)' : 'Puppeteer (fallback)'}
+
+**Benefits of Firecrawl:**
+- More reliable web scraping
+- Better rate limiting
+- Enhanced error handling
+- Professional web scraping service
+
+**Current Status**: ${enhancedUnifiedSearchAdapter.isFirecrawlAvailable() ? 'Firecrawl available' : 'Firecrawl not available, using Puppeteer'}`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error setting Firecrawl preference: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+  mcpServer.tool(
+    'get_search_method_info',
+    'Get information about the current search method and Firecrawl availability',
+    {},
+    async () => {
+      try {
+        const searchMethod = enhancedUnifiedSearchAdapter.getSearchMethod();
+        const firecrawlAvailable = enhancedUnifiedSearchAdapter.isFirecrawlAvailable();
+        
+        let methodDescription = '';
+        let recommendations = '';
+        
+        if (searchMethod === 'firecrawl') {
+          methodDescription = 'Firecrawl MCP server (recommended)';
+          recommendations = '- More reliable web scraping\n- Better rate limiting\n- Professional service\n- Enhanced error handling';
+        } else if (searchMethod === 'puppeteer') {
+          methodDescription = 'Puppeteer (local browser automation)';
+          recommendations = '- Local processing\n- No external dependencies\n- May be less reliable\n- Requires Chrome/Chromium';
+        } else {
+          methodDescription = 'Mixed (both methods available)';
+          recommendations = '- Automatic fallback between methods\n- Best of both worlds\n- Optimal reliability';
+        }
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `**Search Method Information**
+
+**Current Method**: ${methodDescription}
+**Firecrawl Available**: ${firecrawlAvailable ? 'Yes' : 'No'}
+
+**Method Details**:
+${methodDescription}
+
+**Recommendations**:
+${recommendations}
+
+**To Change Method**:
+Use the \`set_firecrawl_preference\` tool to switch between methods.`
+            }
+          ]
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error getting search method info: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
           ]
         };

@@ -1,6 +1,16 @@
 # Scholarly Research MCP Server
 
-A Model Context Protocol (MCP) server that provides access to academic research papers across multiple sources including PubMed, JSTOR, and Google Scholar. **Now with enhanced capabilities for reading full text content, extracting paper sections, and finding specific evidence and quotes for research and essays.**
+A Model Context Protocol (MCP) server that provides access to academic research papers across multiple sources including PubMed, JSTOR, and Google Scholar. **Now with enhanced capabilities for reading full text content, extracting paper sections, finding specific evidence and quotes for research and essays, and comprehensive Google Scholar integration via web scraping.**
+
+## 🆕 What's New in v1.4.0
+
+- **Google Scholar Integration**: Full web scraping support for Google Scholar search and paper details
+- **Firecrawl MCP Integration**: Professional web scraping service for enhanced reliability
+- **Unified Search Interface**: Combined search across PubMed and Google Scholar with deduplication
+- **Enhanced Citation Tracking**: Google Scholar citation counts and related paper discovery
+- **Multi-Source Paper Retrieval**: Access papers from both PubMed and Google Scholar simultaneously
+- **Advanced Sorting Options**: Sort by relevance, date, or citation count across all sources
+- **Dual Scraping Methods**: Choose between Firecrawl (recommended) and Puppeteer with automatic fallback
 
 ## 🆕 What's New in v1.3.0
 
@@ -29,6 +39,8 @@ A Model Context Protocol (MCP) server that provides access to academic research 
 
 Before installing the Scholarly Research MCP Server, ensure you have the following prerequisites installed on your system:
 
+**Note**: This server now includes Google Scholar integration via web scraping, which requires additional system dependencies for Puppeteer (Chrome/Chromium).
+
 #### **Node.js and npm**
 - **Node.js**: Version 18.0.0 or higher
 - **npm**: Version 8.0.0 or higher (comes with Node.js)
@@ -51,29 +63,72 @@ curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
-3. **Verify installation:**
+3. **Install Puppeteer dependencies:**
+```bash
+sudo apt-get install -y \
+    gconf-service \
+    libasound2 \
+    libatk1.0-0 \
+    libc6 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgcc1 \
+    libgconf-2-4 \
+    libgdk-pixbuf2.0-0 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libstdc++6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    ca-certificates \
+    fonts-liberation \
+    libappindicator1 \
+    libnss3 \
+    lsb-release \
+    xdg-utils \
+    wget
+```
+
+4. **Verify installation:**
 ```bash
 node --version
 npm --version
 ```
 
-4. **Install Git (if not already installed):**
+5. **Install Git (if not already installed):**
 ```bash
 sudo apt install git -y
 ```
 
-5. **Clone the repository:**
+6. **Clone the repository:**
 ```bash
 git clone https://github.com/aringad76/mcp-for-research.git
 cd mcp-for-research
 ```
 
-6. **Install dependencies:**
+7. **Install dependencies:**
 ```bash
 npm install
 ```
 
-7. **Build the project:**
+8. **Build the project:**
 ```bash
 npm run build
 ```
@@ -253,6 +308,21 @@ npm run build
 3. **Run tests:**
 ```bash
 npm test
+```
+
+4. **Test Google Scholar integration:**
+```bash
+npm run test:google-scholar
+```
+
+5. **Test unified search:**
+```bash
+npm run test:unified
+```
+
+6. **Test Firecrawl integration:**
+```bash
+npm run test:firecrawl
 ```
 
 ### Troubleshooting Installation Issues
@@ -485,16 +555,143 @@ Extract specific quotes and evidence from a paper for use in essays or research.
 }
 ```
 
+### **Google Scholar Integration Tools** 🆕
+
+#### 8. search_google_scholar
+Search for academic papers on Google Scholar using web scraping.
+
+**Parameters:**
+- `query` (required): Search query string
+- `maxResults` (optional): Maximum number of results (default: 20)
+- `startYear` (optional): Start year for publication range
+- `endYear` (optional): End year for publication range
+- `sortBy` (optional): Sort order (`relevance`, `date`, `citations`) (default: `relevance`)
+
+**Example:**
+```json
+{
+  "query": "deep learning",
+  "maxResults": 15,
+  "startYear": 2020,
+  "sortBy": "citations"
+}
+```
+
+#### 9. search_all_sources
+Search for academic papers across both PubMed and Google Scholar with unified results.
+
+**Parameters:**
+- `query` (required): Search query string
+- `maxResults` (optional): Maximum number of results (default: 20)
+- `startDate` (optional): Start date in YYYY/MM/DD format
+- `endDate` (optional): End year for publication range
+- `journal` (optional): Filter by specific journal
+- `author` (optional): Filter by specific author
+- `sources` (optional): Sources to search (`pubmed`, `google-scholar`) (default: both)
+- `sortBy` (optional): Sort order (`relevance`, `date`, `citations`) (default: `relevance`)
+
+**Example:**
+```json
+{
+  "query": "artificial intelligence",
+  "maxResults": 25,
+  "startDate": "2019/01/01",
+  "endDate": 2024,
+  "sources": ["pubmed", "google-scholar"],
+  "sortBy": "citations"
+}
+```
+
+#### 10. get_google_scholar_citations
+Get citation count for a paper from Google Scholar.
+
+**Parameters:**
+- `title` (required): Title of the paper to search for
+
+**Example:**
+```json
+{
+  "title": "Attention Is All You Need"
+}
+```
+
+#### 11. get_related_papers
+Get related papers from either PubMed or Google Scholar.
+
+**Parameters:**
+- `identifier` (required): Paper identifier (PMID for PubMed, URL for Google Scholar)
+- `source` (required): Source to search for related papers (`pubmed`, `google-scholar`)
+- `maxResults` (optional): Maximum number of related papers (default: 10)
+
+**Example:**
+```json
+{
+  "identifier": "12345678",
+  "source": "pubmed",
+  "maxResults": 15
+}
+```
+
+### **Firecrawl Integration Tools** 🆕
+
+#### 12. search_with_firecrawl
+Search for academic papers using Firecrawl MCP server for enhanced reliability.
+
+**Parameters:**
+- `query` (required): Search query for papers
+- `maxResults` (optional): Maximum number of results (default: 20)
+- `startDate` (optional): Start date in YYYY/MM/DD format
+- `endDate` (optional): End year for publication range
+- `journal` (optional): Filter by specific journal
+- `author` (optional): Filter by specific author
+- `sources` (optional): Sources to search (`pubmed`, `google-scholar`) (default: both)
+- `sortBy` (optional): Sort order (`relevance`, `date`, `citations`) (default: relevance)
+- `preferFirecrawl` (optional): Prefer Firecrawl over Puppeteer (default: true)
+
+**Example:**
+```json
+{
+  "query": "machine learning",
+  "maxResults": 25,
+  "sources": ["pubmed", "google-scholar"],
+  "sortBy": "citations",
+  "preferFirecrawl": true
+}
+```
+
+#### 13. set_firecrawl_preference
+Set whether to prefer Firecrawl over Puppeteer for Google Scholar searches.
+
+**Parameters:**
+- `preferFirecrawl` (required): Whether to prefer Firecrawl over Puppeteer
+
+**Example:**
+```json
+{
+  "preferFirecrawl": true
+}
+```
+
+#### 14. get_search_method_info
+Get information about the current search method and Firecrawl availability.
+
+**Parameters:** None
+
+**Example:**
+```json
+{}
+```
+
 ### **Citation and Reference Tools**
 
-#### 8. get_citation
+#### 15. get_citation
 Get citation in various formats (BibTeX, EndNote, APA, MLA, RIS).
 
 **Parameters:**
 - `pmid` (required): PubMed ID of the paper
 - `format` (required): Citation format (`bibtex`, `endnote`, `apa`, `mla`, `ris`)
 
-#### 9. get_citation_count
+#### 16. get_citation_count
 Get the number of times a paper has been cited.
 
 **Parameters:**
@@ -606,6 +803,41 @@ The server provides comprehensive error handling:
 - User-friendly error messages
 - Full text access fallbacks
 
+## 🆕 Google Scholar Integration
+
+### **Web Scraping Approach**
+Since Google Scholar doesn't provide an official API, this server uses two web scraping methods:
+
+#### **Firecrawl MCP Server (Recommended)**
+- **Professional Service**: Uses Firecrawl MCP server for enhanced reliability
+- **Better Rate Limiting**: Professional web scraping with built-in rate limiting
+- **Enhanced Error Handling**: Robust error handling and fallback mechanisms
+- **Higher Success Rate**: More reliable than local browser automation
+
+#### **Puppeteer (Local Fallback)**
+- **Headless Browser**: Uses Puppeteer for reliable page rendering
+- **Rate Limiting**: Built-in delays to respect Google Scholar's terms of service
+- **User Agent Spoofing**: Mimics real browser behavior to avoid detection
+- **Error Handling**: Graceful fallbacks when scraping encounters issues
+- **Automatic Fallback**: Used when Firecrawl is unavailable
+
+### **Data Sources**
+- **Search Results**: Comprehensive paper search with filtering options
+- **Citation Counts**: Real-time citation tracking from Google Scholar
+- **Related Papers**: Discovery of related research papers
+- **PDF Links**: Direct access to available PDF versions
+- **Paper Details**: Enhanced metadata extraction from search results
+
+### **Unified Search Benefits**
+- **Deduplication**: Automatic removal of duplicate papers across sources
+- **Source Attribution**: Clear indication of where each paper was found
+- **Combined Metadata**: Rich information from both PubMed and Google Scholar
+- **Flexible Filtering**: Choose specific sources or search across all
+- **Advanced Sorting**: Sort by relevance, date, or citation count
+- **Dual Scraping Methods**: Automatic fallback between Firecrawl and Puppeteer
+- **Search Method Tracking**: Know which scraping method was used for each result
+- **Enhanced Reliability**: Better success rates with professional web scraping
+
 ## Development
 
 ### Project Structure
@@ -613,7 +845,9 @@ The server provides comprehensive error handling:
 ├── src/                    # Source code
 │   ├── index.ts           # Main server entry point
 │   └── adapters/
-│       └── pubmed.ts      # PubMed API adapter with full text support
+│       ├── pubmed.ts      # PubMed API integration
+│       ├── google-scholar.ts # Google Scholar web scraping
+│       └── unified-search.ts # Combined search interface
 ├── tests/                  # Test files
 ├── scripts/                # Utility scripts
 ├── docs/                   # Documentation
