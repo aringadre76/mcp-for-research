@@ -80,7 +80,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aringadre76/mcp-for-research.git"
+    "url": "git+https://github.com/aringadre76/mcp-for-research.git"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
