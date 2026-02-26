@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import * as cheerio from 'cheerio';
+import { parseString } from 'xml2js';
 
 export interface ArXivPaper {
   id: string;
@@ -102,6 +103,116 @@ export class ArXivAdapter {
     }
     
     return url;
+  }
+
+  private buildApiSearchUrl(options: ArXivSearchOptions): string {
+    const { query, maxResults = 20, startYear, endYear, sortBy = 'relevance', sortOrder = 'descending', categories } = options;
+    const params = new URLSearchParams();
+    let searchQuery = 'all:' + query.replace(/"/g, '');
+    if (startYear || endYear) {
+      const start = startYear || 1900;
+      const end = endYear || new Date().getFullYear();
+      searchQuery += `+AND+submittedDate:[${start}01010000+TO+${end}12312359]`;
+    }
+    if (categories && categories.length > 0) {
+      searchQuery += '+' + categories.map(c => `cat:${c}`).join('+AND+');
+    }
+    params.set('search_query', searchQuery);
+    params.set('start', '0');
+    params.set('max_results', String(Math.min(maxResults, 2000)));
+    params.set('sortBy', sortBy === 'lastUpdatedDate' ? 'lastUpdatedDate' : sortBy === 'submittedDate' ? 'submittedDate' : 'relevance');
+    params.set('sortOrder', sortOrder);
+    return 'https://export.arxiv.org/api/query?' + params.toString();
+  }
+
+  private parseApiEntry(entry: Record<string, unknown>): ArXivPaper | null {
+    const idUrl = Array.isArray(entry.id) ? entry.id[0] : entry.id;
+    if (typeof idUrl !== 'string') return null;
+    const idMatch = idUrl.match(/arxiv\.org\/abs\/(.+?)(?:v\d+)?$/);
+    const id = idMatch ? idMatch[1] : idUrl.split('/').pop() || '';
+    const title = Array.isArray(entry.title) ? String(entry.title[0]).trim() : String(entry.title || '').trim();
+    if (!id || !title) return null;
+    const summary = Array.isArray(entry.summary) ? String(entry.summary[0]).replace(/\s+/g, ' ').trim() : String(entry.summary || '').trim();
+    const authors: string[] = [];
+    const authorList = entry.author;
+    if (Array.isArray(authorList)) {
+      for (const a of authorList) {
+        const name = (a as Record<string, unknown>).name;
+        if (Array.isArray(name)) authors.push(String(name[0]).trim());
+        else if (name) authors.push(String(name).trim());
+      }
+    }
+    const published = Array.isArray(entry.published) ? String(entry.published[0]) : String(entry.published || '');
+    const updated = Array.isArray(entry.updated) ? String(entry.updated[0]) : String(entry.updated || published);
+    let absUrl = `https://arxiv.org/abs/${id}`;
+    let pdfUrl = `https://arxiv.org/pdf/${id}.pdf`;
+    const links = entry.link;
+    if (Array.isArray(links)) {
+      for (const l of links) {
+        const attrs = (l as Record<string, unknown>).$ as Record<string, string> | undefined;
+        if (!attrs) continue;
+        if (attrs.rel === 'alternate' && attrs.href) absUrl = attrs.href;
+        if (attrs.rel === 'related' && attrs.title === 'pdf' && attrs.href) pdfUrl = attrs.href;
+      }
+    }
+    const categories: string[] = [];
+    const catList = entry.category;
+    if (Array.isArray(catList)) {
+      for (const c of catList) {
+        const term = (c as Record<string, unknown>).$ as Record<string, string> | undefined;
+        if (term && term.term && term.scheme && term.scheme.includes('arxiv')) categories.push(term.term);
+      }
+    }
+    const doi = entry['arxiv:doi'] ?? entry.doi;
+    const journalRef = entry['arxiv:journal_ref'] ?? entry['arxiv:journal_ref'];
+    const comment = entry['arxiv:comment'] ?? entry.comment;
+    return {
+      id,
+      title,
+      authors: authors.length ? authors : ['Unknown authors'],
+      abstract: summary || 'Abstract not available',
+      categories,
+      publicationDate: published ? published.split('T')[0] : new Date().toISOString().split('T')[0],
+      lastUpdated: updated ? updated.split('T')[0] : new Date().toISOString().split('T')[0],
+      pdfUrl,
+      absUrl,
+      doi: Array.isArray(doi) ? String(doi[0]) : doi ? String(doi) : undefined,
+      journalRef: Array.isArray(journalRef) ? String(journalRef[0]) : journalRef ? String(journalRef) : undefined,
+      comment: Array.isArray(comment) ? String(comment[0]) : comment ? String(comment) : undefined
+    };
+  }
+
+  private async searchPapersViaApi(options: ArXivSearchOptions): Promise<ArXivPaper[]> {
+    const url = this.buildApiSearchUrl(options);
+    const response = await fetch(url, { headers: { 'Accept': 'application/atom+xml' } });
+    if (!response.ok) throw new Error(`ArXiv API error: ${response.status} ${response.statusText}`);
+    const xml = await response.text();
+    return new Promise((resolve, reject) => {
+      parseString(xml, (err, result: Record<string, unknown>) => {
+        if (err) {
+          reject(new Error(`ArXiv API parse error: ${err.message}`));
+          return;
+        }
+        const feed = result.feed as Record<string, unknown> | undefined;
+        if (!feed) {
+          resolve([]);
+          return;
+        }
+        let entries = feed.entry as unknown[] | undefined;
+        if (!entries) {
+          resolve([]);
+          return;
+        }
+        if (!Array.isArray(entries)) entries = [entries];
+        const papers: ArXivPaper[] = [];
+        const maxResults = options.maxResults || 20;
+        for (let i = 0; i < entries.length && papers.length < maxResults; i++) {
+          const paper = this.parseApiEntry(entries[i] as Record<string, unknown>);
+          if (paper) papers.push(paper);
+        }
+        resolve(papers);
+      });
+    });
   }
 
   private async searchArXiv(options: ArXivSearchOptions): Promise<string> {
@@ -265,9 +376,7 @@ export class ArXivAdapter {
 
   async searchPapers(options: ArXivSearchOptions): Promise<ArXivPaper[]> {
     try {
-      await this.initializeBrowser();
-      const html = await this.searchArXiv(options);
-      return this.parseSearchResults(html, options.maxResults || 20);
+      return await this.searchPapersViaApi(options);
     } catch (error) {
       throw new Error(`ArXiv search error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -300,6 +409,10 @@ export class ArXivAdapter {
         const doi = $('.doi a').text().trim() || undefined;
         const journalRef = $('.journal-ref').text().trim() || undefined;
         const comment = $('.comment').text().trim() || undefined;
+        
+        if (!title || title.length === 0) {
+          throw new Error('Paper not found: ' + id);
+        }
         
         return {
           id,

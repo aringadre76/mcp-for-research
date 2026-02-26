@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PubMedAdapter } from './adapters/pubmed';
@@ -6,6 +7,7 @@ import { ArXivAdapter } from './adapters/arxiv';
 import { UnifiedSearchAdapter } from './adapters/unified-search';
 import { EnhancedUnifiedSearchAdapter } from './adapters/enhanced-unified-search';
 import { PreferenceAwareUnifiedSearchAdapter } from './adapters/preference-aware-unified-search';
+import { getFirecrawlClientFromEnv } from './adapters/firecrawl-api-client';
 import { UserPreferencesManager } from './preferences/user-preferences';
 import { z } from 'zod';
 
@@ -15,12 +17,14 @@ async function main() {
     version: '2.0.0',
   });
 
-  const pubmedAdapter = new PubMedAdapter();
+  const firecrawlClient = getFirecrawlClientFromEnv();
+  const pubmedApiKey = typeof process !== 'undefined' && process.env && typeof process.env.PUBMED_API_KEY === 'string' ? process.env.PUBMED_API_KEY : undefined;
+  const pubmedAdapter = new PubMedAdapter(pubmedApiKey);
   const googleScholarAdapter = new GoogleScholarAdapter();
   const arxivAdapter = new ArXivAdapter();
   const unifiedSearchAdapter = new UnifiedSearchAdapter();
-  const enhancedUnifiedSearchAdapter = new EnhancedUnifiedSearchAdapter();
-  const preferenceAwareAdapter = new PreferenceAwareUnifiedSearchAdapter();
+  const enhancedUnifiedSearchAdapter = new EnhancedUnifiedSearchAdapter(firecrawlClient ?? undefined);
+  const preferenceAwareAdapter = new PreferenceAwareUnifiedSearchAdapter(firecrawlClient ?? undefined);
   const preferencesManager = UserPreferencesManager.getInstance();
 
   mcpServer.tool(
@@ -39,58 +43,40 @@ async function main() {
     },
     async ({ query, maxResults = 20, startDate, endDate, journal, author, sources = ['pubmed', 'google-scholar', 'arxiv'], includeAbstracts = true, sortBy = 'relevance' }) => {
       try {
-        let allPapers = [];
-        
-        if (sources.includes('pubmed')) {
-          const pubmedPapers = await pubmedAdapter.searchPapers({
-            query,
-            maxResults: Math.ceil(maxResults / sources.length),
-            startDate,
-            endDate,
-            journal,
-            author
-          });
-          allPapers.push(...pubmedPapers);
+        if (!query || !String(query).trim()) {
+          return {
+            content: [
+              { type: 'text', text: 'Error searching papers: Query is required.' }
+            ]
+          };
         }
+        const effectiveSources = sources.filter((s) => s !== 'jstor');
+        const jstorRequested = sources.includes('jstor');
+        const searchSources = effectiveSources.length > 0 ? effectiveSources : ['pubmed', 'google-scholar', 'arxiv'];
+        const prefs = preferencesManager.getPreferences();
+        const endYear = endDate ? parseInt(endDate.split('/')[0], 10) : undefined;
 
-        if (sources.includes('google-scholar')) {
-          try {
-            const scholarPapers = await googleScholarAdapter.searchPapers({
-              query,
-              maxResults: Math.ceil(maxResults / sources.length),
-              startDate,
-              endDate,
-              journal,
-              author
-            });
-            allPapers.push(...scholarPapers);
-          } catch (error) {
-            console.warn('Google Scholar search failed:', error);
-          }
-        }
-
-        if (sources.includes('arxiv')) {
-          try {
-            const arxivPapers = await arxivAdapter.searchPapers({
-              query,
-              maxResults: Math.ceil(maxResults / sources.length),
-              startDate,
-              endDate,
-              journal,
-              author
-            });
-            allPapers.push(...arxivPapers);
-          } catch (error) {
-            console.warn('ArXiv search failed:', error);
-          }
-        }
+        const allPapers = await preferenceAwareAdapter.searchPapers({
+          query,
+          maxResults,
+          startDate,
+          endDate: endYear,
+          journal,
+          author,
+          sources: searchSources,
+          sortBy,
+          preferFirecrawl: prefs.search.preferFirecrawl,
+          respectUserPreferences: false,
+          overrideSources: searchSources
+        });
 
         if (allPapers.length === 0) {
+          const jstorNote = jstorRequested ? '\n\nJSTOR is not implemented; results are from other sources.' : '';
           return {
             content: [
               {
                 type: 'text',
-                text: 'No papers found matching your search criteria.'
+                text: 'No papers found matching your search criteria.' + jstorNote
               }
             ]
           };
@@ -101,20 +87,20 @@ async function main() {
           const pmcInfo = paper.pmcid ? `\n   - PMC ID: ${paper.pmcid} (Full text likely available)` : '';
           const doiInfo = paper.doi ? `\n   - DOI: ${paper.doi}` : '';
           const abstract = includeAbstracts && paper.abstract ? `\n   - Abstract: ${paper.abstract.substring(0, 200)}...` : '';
-          
+          const journalLine = paper.journal ? `\n   - Journal: ${paper.journal}` : '';
+          const pmidLine = paper.pmid ? `\n   - PMID: ${paper.pmid}` : '';
           return `${index + 1}. **${paper.title}**
    - Authors: ${authors}
-   - Journal: ${paper.journal}
-   - Publication Date: ${paper.publicationDate}
-   - PMID: ${paper.pmid}${pmcInfo}${doiInfo}${abstract}
+   - Publication Date: ${paper.publicationDate}${journalLine}${pmidLine}${pmcInfo}${doiInfo}${abstract}
 `;
         }).join('\n');
 
+        const jstorNote = jstorRequested ? '\n\nJSTOR is not implemented; results are from other sources.' : '';
         return {
           content: [
             {
               type: 'text',
-              text: `Found ${allPapers.length} papers from ${sources.join(', ')}:\n\n${resultsText}`
+              text: `Found ${allPapers.length} papers from ${searchSources.join(', ')}:\n\n${resultsText}${jstorNote}`
             }
           ]
         };
@@ -149,7 +135,7 @@ async function main() {
         } else if (identifier.startsWith('PMC') || /^\d+$/.test(identifier)) {
           paper = await pubmedAdapter.getPaperById(identifier);
         } else if (identifier.startsWith('10.') || identifier.startsWith('doi:')) {
-          paper = await pubmedAdapter.getPaperByDOI(identifier.replace('doi:', ''));
+          paper = await pubmedAdapter.getPaperById(identifier.replace('doi:', ''));
         } else if (identifier.startsWith('arxiv:') || identifier.includes('/')) {
           paper = await arxivAdapter.getPaperById(identifier);
         } else {
@@ -174,21 +160,25 @@ async function main() {
           };
         }
 
+        const journalLine = 'journal' in paper ? paper.journal : (paper as { journal?: string }).journal ?? 'N/A';
+        const pmidLine = 'pmid' in paper ? paper.pmid : (paper as { pmid?: string }).pmid ?? 'N/A';
+        const pmcidLine = 'pmcid' in paper ? (paper as { pmcid?: string }).pmcid : (paper as { pmcid?: string }).pmcid ?? 'None';
         let analysisText = `**${paper.title}**
 - Authors: ${paper.authors.join(', ')}
-- Journal: ${paper.journal}
+- Journal: ${journalLine}
 - Publication Date: ${paper.publicationDate}
-- PMID: ${paper.pmid}
-- PMC ID: ${paper.pmcid || 'None'}
+- PMID: ${pmidLine}
+- PMC ID: ${pmcidLine}
 - DOI: ${paper.doi || 'None'}
 - Abstract: ${paper.abstract || 'Not available'}`;
 
         if (analysisType === 'full-text' || analysisType === 'complete') {
           try {
-            const fullText = await pubmedAdapter.getFullText(paper.pmid, 50000);
-            if (fullText) {
-              analysisText += `\n\n**Full Text (Excerpt)**
-${fullText.substring(0, 2000)}...`;
+            if ('pmid' in paper) {
+              const fullText = await pubmedAdapter.getFullTextContent(paper.pmid, (paper as { pmcid?: string }).pmcid);
+              if (fullText) {
+                analysisText += `\n\n**Full Text (Excerpt)**\n${fullText.substring(0, 2000)}...`;
+              }
             }
           } catch (error) {
             analysisText += `\n\n**Full Text**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
@@ -196,39 +186,15 @@ ${fullText.substring(0, 2000)}...`;
         }
 
         if (analysisType === 'quotes' || analysisType === 'complete') {
-          try {
-            const quotes = await pubmedAdapter.getEvidenceQuotes(paper.pmid, 'all', maxQuotes);
-            if (quotes && quotes.length > 0) {
-              analysisText += `\n\n**Key Quotes and Evidence**
-${quotes.map((quote, i) => `${i + 1}. ${quote}`).join('\n')}`;
-            }
-          } catch (error) {
-            analysisText += `\n\n**Quotes**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
-          }
+          analysisText += `\n\n**Key Quotes and Evidence**: Not available (extraction not implemented)`;
         }
 
         if (analysisType === 'statistics' || analysisType === 'complete') {
-          try {
-            const stats = await pubmedAdapter.getEvidenceQuotes(paper.pmid, 'statistics', 10);
-            if (stats && stats.length > 0) {
-              analysisText += `\n\n**Key Statistics**
-${stats.map((stat, i) => `${i + 1}. ${stat}`).join('\n')}`;
-            }
-          } catch (error) {
-            analysisText += `\n\n**Statistics**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
-          }
+          analysisText += `\n\n**Key Statistics**: Not available (extraction not implemented)`;
         }
 
         if (analysisType === 'findings' || analysisType === 'complete') {
-          try {
-            const findings = await pubmedAdapter.getEvidenceQuotes(paper.pmid, 'findings', 10);
-            if (findings && findings.length > 0) {
-              analysisText += `\n\n**Key Findings**
-${findings.map((finding, i) => `${i + 1}. ${finding}`).join('\n')}`;
-            }
-          } catch (error) {
-            analysisText += `\n\n**Findings**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
-          }
+          analysisText += `\n\n**Key Findings**: Not available (extraction not implemented)`;
         }
 
         return {
@@ -270,7 +236,7 @@ ${findings.map((finding, i) => `${i + 1}. ${finding}`).join('\n')}`;
         } else if (identifier.startsWith('PMC') || /^\d+$/.test(identifier)) {
           paper = await pubmedAdapter.getPaperById(identifier);
         } else if (identifier.startsWith('10.') || identifier.startsWith('doi:')) {
-          paper = await pubmedAdapter.getPaperByDOI(identifier.replace('doi:', ''));
+          paper = await pubmedAdapter.getPaperById(identifier.replace('doi:', ''));
         } else if (identifier.startsWith('arxiv:') || identifier.includes('/')) {
           paper = await arxivAdapter.getPaperById(identifier);
         } else {
@@ -295,12 +261,15 @@ ${findings.map((finding, i) => `${i + 1}. ${finding}`).join('\n')}`;
           };
         }
 
+        const paperJournal = 'journal' in paper ? paper.journal : 'N/A';
+        const paperPmid = 'pmid' in paper ? (paper as { pmid: string }).pmid : 'N/A';
+        const paperPmcid = 'pmcid' in paper ? (paper as { pmcid?: string }).pmcid : 'None';
         let resultText = `**${paper.title}**
 - Authors: ${paper.authors.join(', ')}
-- Journal: ${paper.journal}
+- Journal: ${paperJournal}
 - Publication Date: ${paper.publicationDate}
-- PMID: ${paper.pmid}
-- PMC ID: ${paper.pmcid || 'None'}
+- PMID: ${paperPmid}
+- PMC ID: ${paperPmcid || 'None'}
 - DOI: ${paper.doi || 'None'}`;
 
         if (action === 'generate' || action === 'all') {
@@ -316,35 +285,31 @@ ${findings.map((finding, i) => `${i + 1}. ${finding}`).join('\n')}`;
           }
 
           try {
-            const citation = await pubmedAdapter.getCitation(paper.pmid, format);
-            resultText += `\n\n**Citation (${format.toUpperCase()})**
-${citation}`;
+            if (!('pmid' in paper)) throw new Error('Citation generation only supported for PubMed papers');
+            const citationCount = await pubmedAdapter.getCitationCount(paper.pmid);
+            const citedBy = citationCount != null ? ' Cited by ' + citationCount + '.' : '';
+            const citation = paper.authors.join(', ') + ' (' + paper.publicationDate + '). ' + paper.title + '. ' + paper.journal + '. PMID: ' + paper.pmid + '.' + citedBy;
+            resultText += '\n\n**Citation (' + format.toUpperCase() + ')**\n' + citation;
           } catch (error) {
-            resultText += `\n\n**Citation (${format.toUpperCase()})**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
+            resultText += '\n\n**Citation (' + format.toUpperCase() + ')**: Not available (' + (error instanceof Error ? error.message : 'Unknown error') + ')';
           }
         }
 
         if (action === 'count' || action === 'all') {
           try {
-            const citationCount = await pubmedAdapter.getCitationCount(paper.pmid);
-            resultText += `\n\n**Citation Count**: ${citationCount}`;
+            if ('pmid' in paper) {
+              const citationCount = await pubmedAdapter.getCitationCount((paper as { pmid: string }).pmid);
+              resultText += `\n\n**Citation Count**: ${citationCount}`;
+            } else {
+              resultText += '\n\n**Citation Count**: Not available (not a PubMed paper)';
+            }
           } catch (error) {
             resultText += `\n\n**Citation Count**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
           }
         }
 
         if (action === 'related' || action === 'all') {
-          try {
-            const relatedPapers = await pubmedAdapter.getRelatedPapers(paper.pmid, 'pubmed', maxRelated);
-            if (relatedPapers && relatedPapers.length > 0) {
-              resultText += `\n\n**Related Papers**
-${relatedPapers.map((related, i) => `${i + 1}. ${related.title} (PMID: ${related.pmid})`).join('\n')}`;
-            } else {
-              resultText += `\n\n**Related Papers**: None found`;
-            }
-          } catch (error) {
-            resultText += `\n\n**Related Papers**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
-          }
+          resultText += `\n\n**Related Papers**: Not available (not implemented)`;
         }
 
         return {
@@ -395,22 +360,25 @@ ${relatedPapers.map((related, i) => `${i + 1}. ${related.title} (PMID: ${related
         const { action, category, preferences, ...otherParams } = params;
 
         switch (action) {
-          case 'get':
-            if (category === 'source' || category === 'all') {
-              const sourcePrefs = await preferencesManager.getSourcePreferences();
+          case 'get': {
+            const getCategory = category;
+            const wantAll = getCategory === 'all';
+            if (getCategory === 'source' || wantAll) {
+              const prefs = preferencesManager.getPreferences();
+              const sourceList = prefs.search.sources;
+              const sourceText = sourceList.map((s: { name: string; enabled: boolean; priority: number; maxResults?: number }) => `- ${s.name}: ${s.enabled ? 'Enabled' : 'Disabled'} (Priority: ${s.priority}, Max Results: ${s.maxResults ?? 20})`).join('\n');
               return {
                 content: [
                   {
                     type: 'text',
-                    text: `**Source Preferences**
-${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.enabled ? 'Enabled' : 'Disabled'} (Priority: ${prefs.priority}, Max Results: ${prefs.maxResults})`).join('\n')}`
+                    text: `**Source Preferences**\n${sourceText}`
                   }
                 ]
               };
             }
             
-            if (category === 'search' || category === 'all') {
-              const searchPrefs = await preferencesManager.getSearchPreferences();
+            if (getCategory === 'search' || wantAll) {
+              const searchPrefs = preferencesManager.getPreferences().search;
               return {
                 content: [
                   {
@@ -425,8 +393,8 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
               };
             }
             
-            if (category === 'display' || category === 'all') {
-              const displayPrefs = await preferencesManager.getDisplayPreferences();
+            if (getCategory === 'display' || wantAll) {
+              const displayPrefs = preferencesManager.getPreferences().display;
               return {
                 content: [
                   {
@@ -441,15 +409,15 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
               };
             }
             
-            if (category === 'cache' || category === 'all') {
-              const cachePrefs = await preferencesManager.getCachePreferences();
+            if (getCategory === 'cache' || wantAll) {
+              const cachePrefs = preferencesManager.getPreferences().cache;
               return {
                 content: [
                   {
                     type: 'text',
                     text: `**Cache Preferences**
-- Cache Enabled: ${cachePrefs.cacheEnabled}
-- Cache Expiry: ${cachePrefs.cacheExpiry} hours`
+- Cache Enabled: ${cachePrefs.enabled}
+- Cache Expiry: ${Math.round(cachePrefs.ttlMinutes / 60)} hours`
                   }
                 ]
               };
@@ -463,15 +431,15 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
                 }
               ]
             };
+          }
 
           case 'set':
             if (category === 'source' && otherParams.sourceName) {
-              await preferencesManager.setSourcePreference(
-                otherParams.sourceName,
-                otherParams.enabled !== undefined ? otherParams.enabled : true,
-                otherParams.priority || 1,
-                otherParams.maxResults || 20
-              );
+              await preferencesManager.setSourcePreference(otherParams.sourceName, {
+                enabled: otherParams.enabled !== undefined ? otherParams.enabled : true,
+                priority: otherParams.priority ?? 1,
+                maxResults: otherParams.maxResults ?? 20
+              });
               return {
                 content: [
                   {
@@ -483,7 +451,7 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
             }
             
             if (category === 'search') {
-              await preferencesManager.setSearchPreferences({
+              await preferencesManager.updateSearchPreferences({
                 defaultMaxResults: otherParams.defaultMaxResults,
                 defaultSortBy: otherParams.defaultSortBy,
                 preferFirecrawl: otherParams.preferFirecrawl,
@@ -500,7 +468,7 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
             }
             
             if (category === 'display') {
-              await preferencesManager.setDisplayPreferences({
+              await preferencesManager.updateDisplayPreferences({
                 showAbstracts: otherParams.showAbstracts,
                 showCitations: otherParams.showCitations,
                 showUrls: otherParams.showUrls,
@@ -517,9 +485,9 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
             }
             
             if (category === 'cache') {
-              await preferencesManager.setCachePreferences({
-                cacheEnabled: otherParams.cacheEnabled,
-                cacheExpiry: otherParams.cacheExpiry
+              await preferencesManager.updateCachePreferences({
+                enabled: params.cacheEnabled,
+                ttlMinutes: params.cacheExpiry != null ? params.cacheExpiry * 60 : undefined
               });
               return {
                 content: [
@@ -541,7 +509,7 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
             };
 
           case 'reset':
-            await preferencesManager.resetPreferences();
+            await preferencesManager.resetToDefaults();
             return {
               content: [
                 {
@@ -552,7 +520,7 @@ ${Object.entries(sourcePrefs).map(([source, prefs]) => `- ${source}: ${prefs.ena
             };
 
           case 'export':
-            const exportedPrefs = await preferencesManager.exportPreferences();
+            const exportedPrefs = preferencesManager.exportPreferences();
             return {
               content: [
                 {
@@ -634,157 +602,82 @@ ${JSON.stringify(exportedPrefs, null, 2)}
     },
     async (params) => {
       try {
+        if (!firecrawlClient) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Firecrawl is not configured. Set FIRECRAWL_API_KEY or provide a Firecrawl client to enable web research.'
+              }
+            ]
+          };
+        }
         const { action, ...otherParams } = params;
 
         switch (action) {
-          case 'scrape':
+          case 'scrape': {
             if (!otherParams.url) {
               return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'URL is required for scraping action.'
-                  }
-                ]
+                content: [{ type: 'text', text: 'URL is required for scraping action.' }]
               };
             }
-            
+            const scrapeResult = await firecrawlClient.firecrawl_scrape({
+              url: otherParams.url,
+              formats: otherParams.formats || ['markdown'],
+              onlyMainContent: otherParams.onlyMainContent !== false,
+              waitFor: otherParams.waitFor,
+              actions: otherParams.actions
+            });
+            const preview = scrapeResult.content.length > 8000 ? scrapeResult.content.slice(0, 8000) + '\n\n[... truncated]' : scrapeResult.content;
             return {
               content: [
                 {
                   type: 'text',
-                  text: `**Web Scraping Result**
-URL: ${otherParams.url}
-Formats: ${(otherParams.formats || ['markdown']).join(', ')}
-Main Content Only: ${otherParams.onlyMainContent !== false}
-Mobile Viewport: ${otherParams.mobile || false}
-Max Age: ${otherParams.maxAge || 172800000}ms
-
-Note: This is a placeholder response. In a real implementation, this would call the Firecrawl scraping API to extract content from the specified URL.`
+                  text: `**Web Scraping Result**\nURL: ${otherParams.url}\n\n${preview}`
                 }
               ]
             };
+          }
 
-          case 'search':
+          case 'search': {
             if (!otherParams.query) {
               return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Query is required for search action.'
-                  }
-                ]
+                content: [{ type: 'text', text: 'Query is required for search action.' }]
               };
             }
-            
+            const searchResult = await firecrawlClient.firecrawl_search({
+              query: otherParams.query,
+              limit: otherParams.maxResults ?? 5,
+              sources: ['web'],
+              scrapeOptions: {
+                formats: otherParams.formats || ['markdown'],
+                onlyMainContent: otherParams.onlyMainContent !== false
+              }
+            });
+            const lines = searchResult.results.map((r, i) => {
+              const title = r.title ?? 'Untitled';
+              const url = r.url ?? '';
+              const snippet = (r.snippet ?? r.description ?? '').slice(0, 200);
+              return `${i + 1}. ${title}\n   URL: ${url}\n   ${snippet}${snippet.length >= 200 ? '...' : ''}`;
+            });
             return {
               content: [
                 {
                   type: 'text',
-                  text: `**Web Search Result**
-Query: ${otherParams.query}
-Max Results: ${otherParams.maxResults || 5}
-Formats: ${(otherParams.formats || ['markdown']).join(', ')}
-Main Content Only: ${otherParams.onlyMainContent !== false}
-
-Note: This is a placeholder response. In a real implementation, this would call the Firecrawl search API to find relevant web content.`
+                  text: `**Web Search Result**\nQuery: ${otherParams.query}\n\n${lines.join('\n\n')}`
                 }
               ]
             };
+          }
 
           case 'extract':
-            if (!otherParams.urls || otherParams.urls.length === 0) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'URLs array is required for extract action.'
-                  }
-                ]
-              };
-            }
-            
-            if (!otherParams.prompt) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Prompt is required for extract action.'
-                  }
-                ]
-              };
-            }
-            
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `**Content Extraction Result**
-URLs: ${otherParams.urls.join(', ')}
-Prompt: ${otherParams.prompt}
-Schema: ${otherParams.schema ? 'Provided' : 'None'}
-Allow External Links: ${otherParams.allowExternalLinks || false}
-Enable Web Search: ${otherParams.enableWebSearch || false}
-
-Note: This is a placeholder response. In a real implementation, this would call the Firecrawl extraction API to extract structured information from the specified URLs.`
-                }
-              ]
-            };
-
           case 'map':
-            if (!otherParams.url) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'URL is required for map action.'
-                  }
-                ]
-              };
-            }
-            
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `**Website Mapping Result**
-Starting URL: ${otherParams.url}
-Search Term: ${otherParams.searchTerm || 'None'}
-Sitemap Handling: ${otherParams.sitemap || 'include'}
-Include Subdomains: ${otherParams.includeSubdomains || false}
-Limit: ${otherParams.limit || 'None'}
-Ignore Query Parameters: ${otherParams.ignoreQueryParameters !== false}
-
-Note: This is a placeholder response. In a real implementation, this would call the Firecrawl mapping API to discover URLs on the specified website.`
-                }
-              ]
-            };
-
           case 'crawl':
-            if (!otherParams.url) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: 'URL is required for crawl action.'
-                  }
-                ]
-              };
-            }
-            
             return {
               content: [
                 {
                   type: 'text',
-                  text: `**Website Crawling Result**
-Starting URL: ${otherParams.url}
-Max Discovery Depth: ${otherParams.maxDiscoveryDepth || 5}
-Limit: ${otherParams.limit || 10000}
-Allow External Links: ${otherParams.allowExternalLinks || false}
-Deduplicate Similar URLs: ${otherParams.deduplicateSimilarURLs !== false}
-Delay: ${otherParams.delay || 'None'} seconds
-
-Note: This is a placeholder response. In a real implementation, this would start a Firecrawl crawling job to extract content from multiple pages on the specified website.`
+                  text: 'Not implemented for this server; use scrape or search.'
                 }
               ]
             };
@@ -807,10 +700,10 @@ Note: This is a placeholder response. In a real implementation, this would start
               text: `Error performing web research: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
           ]
-          };
-        }
+        };
       }
-    );
+    }
+  );
 
   const transport = new StdioServerTransport();
   mcpServer.connect(transport);

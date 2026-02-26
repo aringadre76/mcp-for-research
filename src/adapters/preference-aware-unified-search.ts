@@ -20,7 +20,8 @@ export class PreferenceAwareUnifiedSearchAdapter {
   private useFirecrawl: boolean = false;
 
   constructor(firecrawlClient?: FirecrawlMCPClient) {
-    this.pubmedAdapter = new PubMedAdapter();
+    const pubmedKey = typeof process !== 'undefined' && process.env && typeof process.env.PUBMED_API_KEY === 'string' ? process.env.PUBMED_API_KEY : undefined;
+    this.pubmedAdapter = new PubMedAdapter(pubmedKey);
     this.googleScholarAdapter = new GoogleScholarAdapter();
     this.arxivAdapter = new ArXivAdapter();
     this.googleScholarFirecrawlAdapter = new GoogleScholarFirecrawlAdapter(firecrawlClient);

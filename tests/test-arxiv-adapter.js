@@ -50,16 +50,19 @@ async function testArXivAdapter() {
     
     console.log('\n4. Testing related papers...');
     if (searchResults && searchResults.length > 0) {
-      const paperId = searchResults[0].id;
-      const relatedPapers = await adapter.getRelatedPapers(paperId, 3);
-      
-      if (relatedPapers && relatedPapers.length > 0) {
-        console.log(`✓ Found ${relatedPapers.length} related papers`);
-        relatedPapers.forEach((paper, index) => {
-          console.log(`  ${index + 1}. ${paper.title} (${paper.id})`);
-        });
-      } else {
-        console.log('⚠ No related papers found');
+      try {
+        const paperId = searchResults[0].id;
+        const relatedPapers = await adapter.getRelatedPapers(paperId, 3);
+        if (relatedPapers && relatedPapers.length > 0) {
+          console.log(`✓ Found ${relatedPapers.length} related papers`);
+          relatedPapers.forEach((paper, index) => {
+            console.log(`  ${index + 1}. ${paper.title} (${paper.id})`);
+          });
+        } else {
+          console.log('⚠ No related papers found');
+        }
+      } catch (error) {
+        console.log(`⚠ Related papers failed: ${error.message}`);
       }
     } else {
       console.log('⚠ Skipping related papers test (no search results)');

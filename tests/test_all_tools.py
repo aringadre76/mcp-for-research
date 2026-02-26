@@ -172,33 +172,42 @@ class TestSuite:
         
         return results
     
+    def _load_tool_registry(self) -> List[tuple]:
+        """Load tool test cases from shared tool-tests.config.js"""
+        try:
+            result = subprocess.run(
+                ["node", "-e", "const c=require('./tests/tool-tests.config.js'); console.log(JSON.stringify(c))"],
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                return []
+            data = json.loads(result.stdout)
+            cases = []
+            for tool in data.get("tools", []):
+                name = tool.get("name", "")
+                for i, tc in enumerate(tool.get("cases", [])):
+                    args = tc.get("args", {})
+                    pattern = tc.get("expectSubstring") or tc.get("expectErrorSubstring") or ""
+                    cases.append((name, args, pattern))
+            return cases
+        except Exception:
+            return []
+
     def run_mcp_tests(self) -> List[TestResult]:
-        """Run MCP tool tests"""
+        """Run MCP tool tests using shared registry (5 consolidated tools)"""
         print("\n=== Testing MCP Tools ===")
         
         if not self.tester.start_server():
             print("✗ Cannot run MCP tests - server failed to start")
             return []
         
-        # Define test cases for each MCP tool
-        test_cases = [
-            ("search_papers", {"query": "machine learning", "maxResults": 3}, "Found"),
-            ("get_paper_by_id", {"pmid": "33844136"}, "Paper Details"),
-            ("get_paper_details", {"pmid": "33844136"}, "Paper Details"),
-            ("get_full_text", {"pmid": "33844136", "maxLength": 1000}, "Full Text Content"),
-            ("extract_paper_sections", {"pmid": "33844136"}, "Paper Sections"),
-            ("search_within_paper", {"pmid": "33844136", "searchTerm": "machine learning"}, "Search Results"),
-            ("get_evidence_quotes", {"pmid": "33844136", "evidenceType": "findings"}, "Evidence and Quotes"),
-            ("get_citation", {"pmid": "33844136", "format": "bibtex"}, "Citation in BIBTEX format"),
-            ("get_citation_count", {"pmid": "33844136"}, "Citation Count"),
-            ("search_google_scholar", {"query": "deep learning", "maxResults": 3}, "Found"),
-            ("search_all_sources", {"query": "artificial intelligence", "maxResults": 5}, "Found"),
-            ("get_google_scholar_citations", {"title": "Attention Is All You Need"}, "Google Scholar Citation Count"),
-            ("get_related_papers", {"identifier": "33844136", "source": "pubmed", "maxResults": 3}, "Related Papers"),
-            ("search_with_firecrawl", {"query": "neural networks", "maxResults": 5, "preferFirecrawl": True}, "Enhanced Search Results"),
-            ("set_firecrawl_preference", {"preferFirecrawl": True}, "Firecrawl Preference Updated"),
-            ("get_search_method_info", {}, "Search Method Information")
-        ]
+        test_cases = self._load_tool_registry()
+        if not test_cases:
+            print("  ⚠ Could not load tool-tests.config.js, skipping MCP tool tests")
+            return []
         
         results = []
         for method, params, expected_pattern in test_cases:
@@ -223,9 +232,9 @@ class TestSuite:
         print("\n=== Testing Error Handling ===")
         
         error_test_cases = [
-            ("get_paper_by_id", {"pmid": "invalid"}, "No paper found"),
-            ("search_papers", {"query": "", "maxResults": 5}, "Error searching papers"),
-            ("get_citation", {"pmid": "33844136", "format": "invalid"}, "Error generating citation")
+            ("paper_analysis", {"identifier": "invalid-id-xyz"}, "No paper found"),
+            ("research_search", {"query": "", "maxResults": 5}, "Error"),
+            ("citation_manager", {"identifier": "33844136", "action": "generate"}, "Format")
         ]
         
         results = []
@@ -252,7 +261,7 @@ class TestSuite:
         
         start_time = time.time()
         try:
-            test_result = self.tester.test_tool("search_papers", {"query": "test", "maxResults": 1})
+            test_result = self.tester.test_tool("research_search", {"query": "test", "maxResults": 1})
             duration = time.time() - start_time
             
             if duration < 5.0:

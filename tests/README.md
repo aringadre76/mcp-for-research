@@ -2,6 +2,19 @@
 
 This directory contains comprehensive test suites to ensure the reliability and functionality of the MCP server.
 
+## Test Architecture (5 MCP Tools)
+
+All five MCP tools (research_search, paper_analysis, citation_manager, research_preferences, web_research) are exercised via a single registry and runner:
+
+- **Registry**: [tool-tests.config.js](tool-tests.config.js) lists each tool and one or more test cases (arguments plus optional expected substring or error substring). This is the single source of truth for tool test cases.
+- **Subprocess runner**: [run-tool-tests.js](run-tool-tests.js) spawns the built server, performs the MCP initialize handshake, then for each registry case sends `tools/call` and asserts on the response (content shape and optional substring). No server refactor is required.
+
+Run all tool tests with:
+```bash
+npm run test:tools
+```
+Requires `npm run build` first. The Python suite's MCP tests use the same registry (loaded via Node) and the current 5 consolidated tool names.
+
 ## Available Test Suites
 
 ### **Bash Test Suite** (Recommended)
@@ -13,6 +26,7 @@ npm run test:all-tools-bash
 ./tests/test-all-tools-simple.sh --basic
 ./tests/test-all-tools-simple.sh --adapters
 ./tests/test-all-tools-simple.sh --data
+./tests/test-all-tools-simple.sh --tools
 ```
 
 ### **Python Test Suite**
@@ -36,21 +50,30 @@ node tests/test-all-tools.js --basic
 node tests/test-all-tools.js --adapters
 ```
 
-### **Individual Tool Tests**
+### **MCP Tool Tests (5 tools)**
 ```bash
-# Test specific functionality
+npm run test:tools
+```
+
+### **Individual Adapter / Functionality Tests**
+```bash
 npm run test:pubmed
 npm run test:google-scholar
 npm run test:unified
 npm run test:firecrawl
+npm run test:firecrawl-parser
 ```
 
 ## Test Files
 
 ### **Core Test Suites**
-- `test-all-tools-simple.sh` - Bash test runner (recommended)
-- `test_all_tools.py` - Python test runner
+- `test-all-tools-simple.sh` - Bash test runner (recommended); includes tool tests when run with `--all`
+- `test_all_tools.py` - Python test runner; MCP tests use the 5 consolidated tools and shared registry
 - `test-all-tools.js` - Node.js test runner
+
+### **Tool Test Architecture**
+- `tool-tests.config.js` - Registry of all 5 tools and their test cases
+- `run-tool-tests.js` - Subprocess MCP runner (initialize + tools/call, asserts on responses)
 
 ### **Specific Functionality Tests**
 - `test-firecrawl-integration.js` - Firecrawl MCP integration
@@ -95,7 +118,7 @@ npm run test:firecrawl
 npm run test:pubmed
 ```
 
-## 📊 Test Results
+## Test Results
 
 All test suites generate detailed reports:
 - **Bash**: Console output with pass/fail counts
@@ -114,7 +137,7 @@ All test suites generate detailed reports:
 - TypeScript compilation support
 - MCP server integration testing
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### **Common Issues**
 1. **Node.js**: Ensure Node.js 18+ is installed
@@ -131,7 +154,7 @@ All test suites generate detailed reports:
 python3 tests/test_all_tools.py --suite all --debug
 ```
 
-## 📈 Continuous Integration
+## Continuous Integration
 
 The test suites are designed to work with CI/CD pipelines:
 - **GitHub Actions**: Automated testing on push/PR

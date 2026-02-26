@@ -81,12 +81,17 @@ export class GoogleScholarAdapter {
     const page = await this.createPage();
     
     try {
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-      
-      await page.waitForSelector('.gs_r', { timeout: 10000 });
-      
-      const html = await page.content();
-      return html;
+      const attempt = async (): Promise<string> => {
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+        await page.waitForSelector('.gs_r', { timeout: 10000 });
+        return page.content();
+      };
+      try {
+        return await attempt();
+      } catch (firstError) {
+        await new Promise(r => setTimeout(r, 2500));
+        return await attempt();
+      }
     } finally {
       await page.close();
     }
@@ -172,8 +177,14 @@ export class GoogleScholarAdapter {
   async searchPapers(options: GoogleScholarSearchOptions): Promise<GoogleScholarPaper[]> {
     try {
       await this.initializeBrowser();
-      const html = await this.searchGoogleScholar(options);
-      return this.parseSearchResults(html, options.maxResults || 20);
+      let html = await this.searchGoogleScholar(options);
+      let papers = this.parseSearchResults(html, options.maxResults || 20);
+      if (papers.length === 0) {
+        await new Promise(r => setTimeout(r, 2000));
+        html = await this.searchGoogleScholar(options);
+        papers = this.parseSearchResults(html, options.maxResults || 20);
+      }
+      return papers;
     } catch (error) {
       throw new Error(`Failed to search Google Scholar: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

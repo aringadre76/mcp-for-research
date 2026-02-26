@@ -1,7 +1,7 @@
 import { PubMedAdapter } from './pubmed';
 import { GoogleScholarAdapter } from './google-scholar';
 import { ArXivAdapter } from './arxiv';
-import { GoogleScholarFirecrawlAdapter } from './google-scholar-firecrawl';
+import { GoogleScholarFirecrawlAdapter, FirecrawlMCPClient } from './google-scholar-firecrawl';
 
 export interface UnifiedPaper {
   title: string;
@@ -34,10 +34,7 @@ export interface EnhancedUnifiedSearchOptions {
   preferFirecrawl?: boolean;
 }
 
-export interface FirecrawlMCPClient {
-  firecrawl_scrape: (params: any) => Promise<{ content: string }>;
-  firecrawl_search: (params: any) => Promise<{ results: any[] }>;
-}
+export type { FirecrawlMCPClient } from './google-scholar-firecrawl';
 
 export class EnhancedUnifiedSearchAdapter {
   private pubmedAdapter: PubMedAdapter;
@@ -47,7 +44,8 @@ export class EnhancedUnifiedSearchAdapter {
   private useFirecrawl: boolean = false;
 
   constructor(firecrawlClient?: FirecrawlMCPClient) {
-    this.pubmedAdapter = new PubMedAdapter();
+    const pubmedKey = typeof process !== 'undefined' && process.env && typeof process.env.PUBMED_API_KEY === 'string' ? process.env.PUBMED_API_KEY : undefined;
+    this.pubmedAdapter = new PubMedAdapter(pubmedKey);
     this.googleScholarAdapter = new GoogleScholarAdapter();
     this.arxivAdapter = new ArXivAdapter();
     this.googleScholarFirecrawlAdapter = new GoogleScholarFirecrawlAdapter(firecrawlClient);

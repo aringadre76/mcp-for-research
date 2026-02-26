@@ -1,6 +1,6 @@
 # API Reference
 
-This document provides comprehensive technical details for all MCP tools available in the Scholarly Research MCP Server.
+This document provides comprehensive technical details for all MCP tools available in the Scholarly Research MCP Server. The consolidated tools research_search and web_research support Firecrawl when FIRECRAWL_API_KEY is set. JSTOR is not implemented; research_search adds a note when JSTOR is requested. web_research implements scrape and search only.
 
 ## Tool Categories
 

@@ -37,7 +37,8 @@ export class UnifiedSearchAdapter {
   private arxivAdapter: ArXivAdapter;
 
   constructor() {
-    this.pubmedAdapter = new PubMedAdapter();
+    const pubmedKey = typeof process !== 'undefined' && process.env && typeof process.env.PUBMED_API_KEY === 'string' ? process.env.PUBMED_API_KEY : undefined;
+    this.pubmedAdapter = new PubMedAdapter(pubmedKey);
     this.googleScholarAdapter = new GoogleScholarAdapter();
     this.arxivAdapter = new ArXivAdapter();
   }

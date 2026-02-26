@@ -51,6 +51,38 @@ async function testFirecrawlIntegration() {
     } else {
       console.log('⚠ ArXiv search returned no results');
     }
+
+    console.log('\n8. Testing adapter with mock Firecrawl client...');
+    const mockMarkdown = [
+      '**Mock Paper Title**',
+      'Authors: Mock Author One, Mock Author Two',
+      'Journal: Mock Journal',
+      'Publication Date: 2024',
+      'Citations: 5',
+      'URL: https://example.com/mock',
+      'Abstract: A mock abstract for testing.'
+    ].join('\n');
+    const mockClient = {
+      firecrawl_scrape: () => Promise.resolve({ content: mockMarkdown }),
+      firecrawl_search: () => Promise.resolve({
+        results: [
+          { title: 'Search Result', url: 'https://example.com/s', snippet: 'Snippet text', description: 'Snippet text' }
+        ]
+      })
+    };
+    const adapterWithMock = new GoogleScholarFirecrawlAdapter(mockClient);
+    const mockSearchPapers = await adapterWithMock.searchPapers({ query: 'test', maxResults: 5 });
+    if (mockSearchPapers.length === 0 || mockSearchPapers[0].title !== 'Mock Paper Title') {
+      throw new Error('Mock client searchPapers: expected at least one paper with title "Mock Paper Title", got ' + (mockSearchPapers[0]?.title ?? 'none'));
+    }
+    if (!Array.isArray(mockSearchPapers[0].authors) || mockSearchPapers[0].authors.length !== 2) {
+      throw new Error('Mock client searchPapers: expected 2 authors, got ' + (mockSearchPapers[0].authors?.length ?? 0));
+    }
+    const mockSearchWithFirecrawl = await adapterWithMock.searchWithFirecrawl('query', 3);
+    if (mockSearchWithFirecrawl.length === 0 || mockSearchWithFirecrawl[0].title !== 'Search Result') {
+      throw new Error('Mock client searchWithFirecrawl: expected at least one result with title "Search Result", got ' + (mockSearchWithFirecrawl[0]?.title ?? 'none'));
+    }
+    console.log('✓ Mock Firecrawl client: searchPapers and searchWithFirecrawl returned expected structure');
     
     console.log('\n✅ All Firecrawl integration tests passed!');
     console.log('\nNote: To use Firecrawl, you need to:');

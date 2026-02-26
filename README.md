@@ -24,6 +24,16 @@ This tool helps you:
 - **Content Extraction**: Full-text paper access and analysis
 - **Citation Management**: Multiple citation format support
 - **Error Handling**: Robust fallback mechanisms
+- **Web research (Firecrawl)**: When `FIRECRAWL_API_KEY` is set in the environment (or a Firecrawl client is provided), the `web_research` tool can scrape URLs and run web search. See [Configuration](#configuration) and copy `.env.example` to `.env` to set your key. Get an API key at [firecrawl.dev](https://firecrawl.dev).
+
+## Configuration
+
+Do not hardcode API keys. Set all keys via environment variables only (e.g. copy `.env.example` to `.env` and fill in values there). Never commit `.env` (it is in `.gitignore`).
+
+Optional environment variables:
+
+- **FIRECRAWL_API_KEY**: Enables the `web_research` tool (scrape, search) and optional Firecrawl-based Google Scholar in `research_search` when the preference is set. Leave unset if you do not use Firecrawl.
+- **PUBMED_API_KEY**: Optional. NCBI/E-utilities API key for higher rate limits. Leave unset to use PubMed without a key.
 
 ## Project Structure
 
@@ -85,10 +95,9 @@ tests/
 The server provides **5 consolidated MCP tools** that replace the previous 24 individual tools:
 
 ### 1. **`research_search`**
-Comprehensive research paper search across multiple sources with advanced filtering and unified results.
+Comprehensive research paper search across PubMed, Google Scholar, and ArXiv. Uses the preference-aware adapter: when Firecrawl is configured and the preference is set, Google Scholar can use Firecrawl instead of Puppeteer. JSTOR is accepted in `sources` but not implemented; if requested, a note is appended: "JSTOR is not implemented; results are from other sources."
 
-**Combines**: All individual search tools from PubMed, Google Scholar, ArXiv, and JSTOR
-**Parameters**: Query, sources, filters, display options, sorting
+**Parameters**: Query, sources (pubmed, google-scholar, arxiv, jstor), maxResults, startDate, endDate, journal, author, includeAbstracts, sortBy
 
 ### 2. **`paper_analysis`**
 Get comprehensive paper information, full text, and analysis including quotes, statistics, and findings.
@@ -111,8 +120,8 @@ Manage research preferences including source priorities, search settings, displa
 ### 5. **`web_research`**
 Perform web-based research using Firecrawl for reliable content extraction and analysis.
 
-**Combines**: Firecrawl integration and web research tools
-**Parameters**: Action, targets, options, crawling limits
+**Requires**: Set `FIRECRAWL_API_KEY` for scrape and search. Extract, map, and crawl are not implemented; use scrape or search.
+**Parameters**: Action (scrape, search, extract, map, crawl), url, query, maxResults, formats, onlyMainContent, waitFor
 
 ## Quick Start
 
@@ -302,3 +311,6 @@ If you need help:
 ---
 
 **Note**: This tool is designed to be easy to use while providing powerful research capabilities. The consolidated approach makes it simpler to use while maintaining all the functionality of the previous version.
+the previous version.
+s version.
+the previous version.

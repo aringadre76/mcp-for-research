@@ -75,6 +75,13 @@ test_data_validation() {
     run_simple_test "Check Enhanced Unified Search adapter exists" "test -f dist/adapters/enhanced-unified-search.js"
 }
 
+# Function to test all 5 MCP tools via subprocess runner
+test_tool_tests() {
+    echo -e "\n${YELLOW}=== Testing MCP Tools (5 tools) ===${NC}"
+    
+    run_simple_test "Run tool test suite" "node tests/run-tool-tests.js"
+}
+
 # Function to run all tests
 run_all_tests() {
     echo -e "${BLUE}==========================================${NC}"
@@ -84,6 +91,7 @@ run_all_tests() {
     test_basic_functionality
     test_adapters
     test_data_validation
+    test_tool_tests
     
     # Print summary
     echo -e "\n${YELLOW}==========================================${NC}"
@@ -111,6 +119,7 @@ show_help() {
     echo "  --basic        Run only basic functionality tests"
     echo "  --adapters     Run only adapter tests"
     echo "  --data         Run only data validation tests"
+    echo "  --tools        Run only MCP tool tests (5 tools)"
     echo "  --all          Run all tests (default)"
     echo ""
     echo "Examples:"
@@ -133,6 +142,9 @@ case "${1:---all}" in
         ;;
     --data)
         test_data_validation
+        ;;
+    --tools)
+        test_tool_tests
         ;;
     --all)
         run_all_tests
