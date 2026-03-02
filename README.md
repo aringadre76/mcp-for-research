@@ -26,18 +26,11 @@ This tool helps you:
 - **Error Handling**: Robust fallback mechanisms
 - **Web research (Firecrawl)**: When `FIRECRAWL_API_KEY` is set in the environment (or a Firecrawl client is provided), the `web_research` tool can scrape URLs and run web search. See [Configuration](#configuration) and copy `.env.example` to `.env` to set your key. Get an API key at [firecrawl.dev](https://firecrawl.dev).
 
-## Configuration
+## Configuration Overview
 
-Do not hardcode API keys. Set all keys via environment variables only (e.g. copy `.env.example` to `.env` and fill in values there). Never commit `.env` (it is in `.gitignore`).
-
-Optional environment variables:
-
-- **FIRECRAWL_API_KEY**: Enables the `web_research` tool (scrape, search) and optional Firecrawl-based Google Scholar in `research_search` when the preference is set. Leave unset if you do not use Firecrawl.
-- **PUBMED_API_KEY**: Optional. NCBI/E-utilities API key for higher rate limits. Leave unset to use PubMed without a key.
+Configuration for environment variables and API keys is documented in more detail in the `docs/` folder and `.env.example`. At a high level, you configure API keys via environment variables and should avoid committing any secret values.
 
 ## Project Structure
-
-This tool is organized into several key components:
 
 ### **Core Components**
 ```
@@ -69,8 +62,7 @@ docs/
 ├── API_REFERENCE.md                   # Complete API documentation
 ├── ARCHITECTURE.md                    # Technical system design
 ├── DATA_MODELS.md                     # Data structure definitions
-├── DEVELOPMENT.md                     # Developer setup guide
-└── TROUBLESHOOTING.md                 # Problem-solving guide
+└── DEVELOPMENT.md                     # Developer setup guide
 ```
 
 ### **Testing**
@@ -89,6 +81,138 @@ tests/
 ├── .env.example                       # Environment variables template
 └── README.md                          # This file
 ```
+
+## Quick Start
+
+Pick your AI tool below to get started quickly:
+
+[![Add to Cursor](https://img.shields.io/badge/Add_to_Cursor-black?style=for-the-badge)](cursor://anysphere.cursor-deeplink/mcp/install?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0=)
+[![Add to VS Code](https://img.shields.io/badge/Add_to_VS_Code-black?style=for-the-badge&logo=visualstudiocode&logoColor=007ACC)](#vs-code--copy-configuration)
+[![Add to Claude](https://img.shields.io/badge/Add_to_Claude-black?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-desktop--copy-configuration)
+[![Add to ChatGPT](https://img.shields.io/badge/Add_to_ChatGPT-black?style=for-the-badge&logo=openai&logoColor=white)](#manual--copy-configuration-json)
+[![Add to Codex](https://img.shields.io/badge/Add_to_Codex-black?style=for-the-badge&logo=openai&logoColor=white)](#claude-code--gemini--codex--cli)
+[![Add to Gemini](https://img.shields.io/badge/Add_to_Gemini-black?style=for-the-badge&logo=googlegemini&logoColor=white)](#claude-code--gemini--codex--cli)
+
+> **Cursor** is a true one-click install via the deeplink above. For other tools, the buttons jump to the relevant configuration section.
+
+### Claude Desktop – Copy configuration
+
+Add this to your `claude_desktop_config.json` under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "scholarly-research-mcp": {
+      "command": "npx",
+      "args": ["-y", "scholarly-research-mcp"]
+    }
+  }
+}
+```
+
+Then fully restart Claude Desktop.  
+Config file locations:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+### Cursor IDE – One‑click install
+
+If you use Cursor, you can install this MCP server with a single click:
+
+[**One‑Click – Add to Cursor**](cursor://anysphere.cursor-deeplink/mcp/install?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0=)
+
+This opens Cursor and pre-fills an MCP server that runs `npx -y scholarly-research-mcp`. You’ll need Node.js and npm available on your system.
+
+### VS Code – Copy configuration
+
+Create `.vscode/mcp.json` in your project (or edit your global MCP config) and add:
+
+```json
+{
+  "servers": {
+    "scholarly-research-mcp": {
+      "command": "npx",
+      "args": ["-y", "scholarly-research-mcp"]
+    }
+  }
+}
+```
+
+Then reload VS Code so the Copilot / MCP integration picks it up.
+
+### Claude Code / Gemini / Codex – CLI
+
+If your tool lets you point at a local MCP server command, use:
+
+```bash
+npx -y scholarly-research-mcp
+```
+
+or, after cloning this repo and building:
+
+```bash
+node dist/index.js
+```
+
+Configure your AI tool to use that command as an MCP server.
+
+### Manual – Copy configuration JSON
+
+For any MCP-compatible assistant that accepts a JSON config (similar to `mcp.json`), use:
+
+```json
+{
+  "mcpServers": {
+    "scholarly-research-mcp": {
+      "command": "npx",
+      "args": ["-y", "scholarly-research-mcp"]
+    }
+  }
+}
+```
+
+Paste this into the assistant’s MCP configuration and adjust paths/env vars if needed.
+
+## Requirements
+
+- **Node.js >= 18.17** (LTS recommended). Check with `node -v`.
+- **npm** (comes with Node.js).
+- **Google Chrome or Chromium** (optional) – only needed for Google Scholar scraping and ArXiv full-text extraction. If you only use PubMed, ArXiv API search, or Firecrawl-based features, no browser is required. You can point to a custom binary with `PUPPETEER_EXECUTABLE_PATH` or `CHROME_PATH`.
+
+## Local MCP Setup
+
+1. **Download the tool**
+   ```bash
+   git clone https://github.com/aringadre76/mcp-for-research.git
+   cd mcp-for-research
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Build the tool**
+   ```bash
+   npm run build
+   ```
+
+4. **Configure your AI assistant**
+   - Find "MCP Servers" or "Tools" in your AI assistant's settings
+   - Add a new MCP server
+   - Set the command to: `node dist/index.js`
+   - Set the working directory to your project folder
+
+5. **Test the setup**
+   ```bash
+   npm run test:all-tools-bash
+   ```
+
+6. **Connect from your AI assistant**
+   - Open your assistant's settings and find the section for MCP servers or tools.
+   - Add a new MCP server that runs the command `node dist/index.js` in the `mcp-for-research` folder.
+   - Save the configuration and ask the assistant to list or use the `research_search` tool to confirm it is working.
 
 ## Available Tools
 
@@ -122,57 +246,6 @@ Perform web-based research using Firecrawl for reliable content extraction and a
 
 **Requires**: Set `FIRECRAWL_API_KEY` for scrape and search. Extract, map, and crawl are not implemented; use scrape or search.
 **Parameters**: Action (scrape, search, extract, map, crawl), url, query, maxResults, formats, onlyMainContent, waitFor
-
-## Quick Start
-
-### Option 1: Use Through AI Assistants (Easiest - No Setup Required)
-If you're not comfortable with technical setup, you can use this tool through AI assistants like:
-- **Claude** (Anthropic)
-- **ChatGPT** (OpenAI) 
-- **Cursor** (Code editor with AI)
-
-These assistants can use this tool to help you find research papers without any setup on your part.
-
-### Option 2: Set Up MCP on Your Computer (For Advanced Users)
-This option lets you use the tool directly with AI assistants on your computer. It's like giving your AI assistant a special tool to find research papers.
-
-## Setting Up MCP (Model Context Protocol)
-
-MCP is like a "language" that lets AI assistants talk to tools on your computer. Think of it like installing a special app that your AI assistant can use.
-
-### What You Need
-- **A computer** (Windows, Mac, or Linux)
-- **An AI assistant** that supports MCP (like Claude Desktop, Cursor, or others)
-- **Basic computer skills** (downloading files, running programs)
-
-### Step-by-Step Setup
-
-1. **Download the tool**
-   ```bash
-   git clone https://github.com/aringadre76/mcp-for-research.git
-   cd mcp-for-research
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Build the tool**
-   ```bash
-   npm run build
-   ```
-
-4. **Configure your AI assistant**
-   - Find "MCP Servers" or "Tools" in your AI assistant's settings
-   - Add a new MCP server
-   - Set the command to: `node dist/index.js`
-   - Set the working directory to your project folder
-
-5. **Test the setup**
-   ```bash
-   npm run test:all-tools-bash
-   ```
 
 ## Usage Examples
 
@@ -222,15 +295,6 @@ MCP is like a "language" that lets AI assistants talk to tools on your computer.
 }
 ```
 
-## Benefits of the Consolidated Approach
-
-✅ **80% reduction** in tool count (24 → 5)  
-✅ **Easier to remember** and use  
-✅ **More powerful** - multiple operations in single calls  
-✅ **Better performance** - fewer tool registrations  
-✅ **Easier maintenance** - less code duplication  
-✅ **Consistent interface** - similar parameter patterns  
-
 ## Migration from Previous Version
 
 The consolidated tools are **backward compatible** - you can still access the same functionality, just through fewer, more powerful tools. Each consolidated tool accepts parameters that let you specify exactly what you want to do.
@@ -248,10 +312,13 @@ The consolidated tools are **backward compatible** - you can still access the sa
 ### Common Issues
 
 **Q: The tool doesn't start**
-A: Make sure you've run `npm install` and `npm run build` first.
+A: Make sure you have Node.js >= 18.17 installed (`node -v`). If running from a clone, run `npm install && npm run build` first.
 
 **Q: My AI assistant can't find the tools**
-A: Check that the MCP server path is correct in your AI assistant's settings.
+A: Check that the MCP server path is correct in your AI assistant's settings. After adding the config, fully restart the assistant.
+
+**Q: Google Scholar or ArXiv full-text features fail with a Chrome error**
+A: These features need a local Chrome or Chromium binary. Install Google Chrome, or set `PUPPETEER_EXECUTABLE_PATH=/path/to/chrome`. PubMed, ArXiv API search, and Firecrawl features work without a browser.
 
 **Q: Searches return no results**
 A: Try different search terms or check if your sources are enabled in preferences.
@@ -294,23 +361,11 @@ For comprehensive documentation, guides, and technical details, see the [`docs/`
 - **[API Reference](./docs/API_REFERENCE.md)** - Complete tool documentation
 - **[Project Structure](./docs/PROJECT_STRUCTURE.md)** - Clean project organization
 
-## Support
-
-If you need help:
-1. Check the troubleshooting section above
-2. Look at the documentation in the `docs/` folder
-3. Open an issue on GitHub
-4. Check the CHANGELOG.md for recent updates
-
 ## Version History
 
+- **v2.0.2**: One-click install buttons, switched to puppeteer-core (no Chromium download), pinned cheerio for Node 18 compatibility, added engines field, security fix for .env in npm package
+- **v2.0.1**: Firecrawl web research and Google Scholar integration improvements, documentation cleanup
 - **v2.0.0**: Consolidated 24 tools into 5 powerful tools
 - **v1.4.x**: Previous version with 24 individual tools
 - **v1.0.x**: Initial release
 
----
-
-**Note**: This tool is designed to be easy to use while providing powerful research capabilities. The consolidated approach makes it simpler to use while maintaining all the functionality of the previous version.
-the previous version.
-s version.
-the previous version.

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import 'dotenv/config';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -14,7 +15,7 @@ import { z } from 'zod';
 async function main() {
   const mcpServer = new McpServer({
     name: 'scholarly-research-mcp',
-    version: '2.0.0',
+    version: '2.0.2',
   });
 
   const firecrawlClient = getFirecrawlClientFromEnv();

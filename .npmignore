@@ -5,6 +5,7 @@ docs/
 .cursor/
 .git/
 .gitignore
+.env
 tsconfig.json
 *.log
 node_modules/

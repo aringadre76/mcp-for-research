@@ -1,5 +1,6 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer-core';
 import * as cheerio from 'cheerio';
+import { findChromeExecutable } from '../utils/find-chrome';
 
 export interface GoogleScholarPaper {
   title: string;
@@ -32,6 +33,7 @@ export class GoogleScholarAdapter {
     try {
       this.browser = await puppeteer.launch({
         headless: true,
+        executablePath: findChromeExecutable(),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',

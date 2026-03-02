@@ -1,6 +1,7 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer-core';
 import * as cheerio from 'cheerio';
 import { parseString } from 'xml2js';
+import { findChromeExecutable } from '../utils/find-chrome';
 
 export interface ArXivPaper {
   id: string;
@@ -40,6 +41,7 @@ export class ArXivAdapter {
     try {
       this.browser = await puppeteer.launch({
         headless: true,
+        executablePath: findChromeExecutable(),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
