@@ -87,16 +87,17 @@ tests/
 Pick your AI tool below to get started quickly:
 
 [![Add to Cursor](https://img.shields.io/badge/Add_to_Cursor-black?style=for-the-badge)](https://cursor.com/en/install-mcp?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0%3D)
-[![Add to VS Code](https://img.shields.io/badge/Add_to_VS_Code-black?style=for-the-badge&logo=visualstudiocode&logoColor=007ACC)](#vs-code--copy-configuration)
-[![Add to Claude](https://img.shields.io/badge/Add_to_Claude-black?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-desktop--copy-configuration)
-[![Add to ChatGPT](https://img.shields.io/badge/Add_to_ChatGPT-black?style=for-the-badge&logo=openai&logoColor=white)](#manual--copy-configuration-json)
-[![Add to Codex](https://img.shields.io/badge/Add_to_Codex-black?style=for-the-badge&logo=openai&logoColor=white)](#claude-code--gemini--codex--cli)
-[![Add to Gemini](https://img.shields.io/badge/Add_to_Gemini-black?style=for-the-badge&logo=googlegemini&logoColor=white)](#claude-code--gemini--codex--cli)
+[![Add to VS Code](https://img.shields.io/badge/Add_to_VS_Code-black?style=for-the-badge&logo=visualstudiocode&logoColor=007ACC)](#vs-code-copy-configuration)
+[![Add to Claude](https://img.shields.io/badge/Add_to_Claude-black?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-desktop-copy-configuration)
+[![Add to ChatGPT](https://img.shields.io/badge/Add_to_ChatGPT-black?style=for-the-badge&logo=openai&logoColor=white)](#chatgpt-remote-connector)
+[![Add to Codex](https://img.shields.io/badge/Add_to_Codex-black?style=for-the-badge&logo=openai&logoColor=white)](#codex-cli-configuration)
+[![Add to Gemini](https://img.shields.io/badge/Add_to_Gemini-black?style=for-the-badge&logo=googlegemini&logoColor=white)](#gemini-cli-configuration)
 
 > **Cursor** uses Cursor's install page to hand off to the desktop app and open the MCP install prompt. If your system does not register the Cursor URL handler, use the manual config below instead.
 >
 > If Cursor adds the server but startup fails with `npm error could not determine executable to run`, the npm `latest` release is stale. In that case, clone this repo and use the local `node dist/index.js` command below until the refreshed npm publish is live.
 
+<a id="claude-desktop-copy-configuration"></a>
 ### Claude Desktop – Copy configuration
 
 Add this to your `claude_desktop_config.json` under `mcpServers`:
@@ -136,6 +137,7 @@ npm run build
 node dist/index.js
 ```
 
+<a id="vs-code-copy-configuration"></a>
 ### VS Code – Copy configuration
 
 Create `.vscode/mcp.json` in your project (or edit your global MCP config) and add:
@@ -144,6 +146,7 @@ Create `.vscode/mcp.json` in your project (or edit your global MCP config) and a
 {
   "servers": {
     "scholarly-research-mcp": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "scholarly-research-mcp"]
     }
@@ -153,21 +156,57 @@ Create `.vscode/mcp.json` in your project (or edit your global MCP config) and a
 
 Then reload VS Code so the Copilot / MCP integration picks it up.
 
-### Claude Code / Gemini / Codex – CLI
+<a id="claude-code-cli-configuration"></a>
+### Claude Code – CLI
 
-If your tool lets you point at a local MCP server command, use:
-
-```bash
-npx -y scholarly-research-mcp
-```
-
-or, after cloning this repo and building:
+Run:
 
 ```bash
-node dist/index.js
+claude mcp add scholarly-research-mcp -- npx -y scholarly-research-mcp
 ```
 
-Configure your AI tool to use that command as an MCP server.
+Claude Code can also read project-scoped MCP config from a `.mcp.json` file in your repo if you prefer to commit the setup.
+
+<a id="gemini-cli-configuration"></a>
+### Gemini – CLI
+
+Add this to your Gemini CLI settings file:
+
+- User scope: `~/.gemini/settings.json`
+- Project scope: `.gemini/settings.json`
+
+```json
+{
+  "mcpServers": {
+    "scholarly-research-mcp": {
+      "command": "npx",
+      "args": ["-y", "scholarly-research-mcp"]
+    }
+  }
+}
+```
+
+Gemini CLI also supports adding MCP servers through its built-in `mcp` commands if you prefer not to edit JSON manually.
+
+<a id="codex-cli-configuration"></a>
+### Codex – CLI
+
+Run:
+
+```bash
+codex mcp add scholarly-research-mcp -- npx -y scholarly-research-mcp
+```
+
+Codex stores MCP configuration in `~/.codex/config.toml` by default, and the Codex IDE extension shares that same MCP config.
+
+<a id="chatgpt-remote-connector"></a>
+### ChatGPT – Remote connector
+
+ChatGPT does not run local stdio MCP servers directly from a command like `npx -y scholarly-research-mcp`.
+
+To use this server with ChatGPT, you need to expose it through a public HTTPS MCP endpoint, then add that endpoint in ChatGPT under `Settings -> Apps & Connectors -> Create`.
+
+If you want a local desktop setup instead of deploying a remote endpoint, use Cursor, Claude Desktop, VS Code, Claude Code, Gemini CLI, or Codex instead.
 
 ### Manual – Copy configuration JSON
 
