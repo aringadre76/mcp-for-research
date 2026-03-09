@@ -86,14 +86,16 @@ tests/
 
 Pick your AI tool below to get started quickly:
 
-[![Add to Cursor](https://img.shields.io/badge/Add_to_Cursor-black?style=for-the-badge)](cursor://anysphere.cursor-deeplink/mcp/install?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0=)
+[![Add to Cursor](https://img.shields.io/badge/Add_to_Cursor-black?style=for-the-badge)](https://cursor.com/en/install-mcp?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0%3D)
 [![Add to VS Code](https://img.shields.io/badge/Add_to_VS_Code-black?style=for-the-badge&logo=visualstudiocode&logoColor=007ACC)](#vs-code--copy-configuration)
 [![Add to Claude](https://img.shields.io/badge/Add_to_Claude-black?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-desktop--copy-configuration)
 [![Add to ChatGPT](https://img.shields.io/badge/Add_to_ChatGPT-black?style=for-the-badge&logo=openai&logoColor=white)](#manual--copy-configuration-json)
 [![Add to Codex](https://img.shields.io/badge/Add_to_Codex-black?style=for-the-badge&logo=openai&logoColor=white)](#claude-code--gemini--codex--cli)
 [![Add to Gemini](https://img.shields.io/badge/Add_to_Gemini-black?style=for-the-badge&logo=googlegemini&logoColor=white)](#claude-code--gemini--codex--cli)
 
-> **Cursor** is a true one-click install via the deeplink above. For other tools, the buttons jump to the relevant configuration section.
+> **Cursor** uses Cursor's install page to hand off to the desktop app and open the MCP install prompt. If your system does not register the Cursor URL handler, use the manual config below instead.
+>
+> If Cursor adds the server but startup fails with `npm error could not determine executable to run`, the npm `latest` release is stale. In that case, clone this repo and use the local `node dist/index.js` command below until the refreshed npm publish is live.
 
 ### Claude Desktop – Copy configuration
 
@@ -120,9 +122,19 @@ Config file locations:
 
 If you use Cursor, you can install this MCP server with a single click:
 
-[**One‑Click – Add to Cursor**](cursor://anysphere.cursor-deeplink/mcp/install?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0=)
+[**One‑Click – Add to Cursor**](https://cursor.com/en/install-mcp?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0%3D)
 
-This opens Cursor and pre-fills an MCP server that runs `npx -y scholarly-research-mcp`. You’ll need Node.js and npm available on your system.
+This opens Cursor's install handoff page, then launches the Cursor desktop app with an MCP install prompt for `npx -y scholarly-research-mcp`. You’ll need Node.js and npm available on your system.
+
+If startup fails with `npm error could not determine executable to run`, the currently published npm package is missing its executable metadata. Until the refreshed npm release is published, use the local clone/build path below:
+
+```bash
+git clone https://github.com/aringadre76/mcp-for-research
+cd mcp-for-research
+npm install
+npm run build
+node dist/index.js
+```
 
 ### VS Code – Copy configuration
 
