@@ -84,18 +84,23 @@ tests/
 
 ## Quick Start
 
-Pick your AI tool below to get started quickly:
+Install in one click where the client actually supports a desktop handoff:
 
 [![Add to Cursor](https://img.shields.io/badge/Add_to_Cursor-black?style=for-the-badge)](https://cursor.com/en/install-mcp?name=scholarly-research-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInNjaG9sYXJseS1yZXNlYXJjaC1tY3AiXX0%3D)
-[![Add to VS Code](https://img.shields.io/badge/Add_to_VS_Code-black?style=for-the-badge&logo=visualstudiocode&logoColor=007ACC)](#vs-code-copy-configuration)
-[![Add to Claude](https://img.shields.io/badge/Add_to_Claude-black?style=for-the-badge&logo=anthropic&logoColor=white)](#claude-desktop-copy-configuration)
-[![Add to ChatGPT](https://img.shields.io/badge/Add_to_ChatGPT-black?style=for-the-badge&logo=openai&logoColor=white)](#chatgpt-remote-connector)
-[![Add to Codex](https://img.shields.io/badge/Add_to_Codex-black?style=for-the-badge&logo=openai&logoColor=white)](#codex-cli-configuration)
-[![Add to Gemini](https://img.shields.io/badge/Add_to_Gemini-black?style=for-the-badge&logo=googlegemini&logoColor=white)](#gemini-cli-configuration)
+[![Add to VS Code](https://img.shields.io/badge/Add_to_VS_Code-black?style=for-the-badge&logo=visualstudiocode&logoColor=007ACC)](vscode:mcp/install?%7B%22name%22%3A%22scholarly-research-mcp%22%2C%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22scholarly-research-mcp%22%5D%7D)
 
 > **Cursor** uses Cursor's install page to hand off to the desktop app and open the MCP install prompt. If your system does not register the Cursor URL handler, use the manual config below instead.
 >
 > If Cursor adds the server but startup fails with `npm error could not determine executable to run`, the npm `latest` release is stale. In that case, clone this repo and use the local `node dist/index.js` command below until the refreshed npm publish is live.
+>
+> **VS Code** uses the `vscode:mcp/install` deep link to open VS Code and prompt to add the MCP server to your configuration.
+
+Other clients are documented below, but they do **not** currently support the same kind of reliable README click -> open desktop app -> install server flow for this project:
+
+- **Claude Desktop**: supports `.mcpb` desktop extensions, but this repo does not currently ship a bundled `.mcpb`
+- **ChatGPT**: requires a public HTTPS MCP endpoint rather than a local stdio command
+- **Codex**: configured through `codex mcp add` or `config.toml`
+- **Gemini**: configured through `settings.json` or Gemini CLI MCP commands
 
 <a id="claude-desktop-copy-configuration"></a>
 ### Claude Desktop – Copy configuration
