@@ -10,14 +10,14 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-12T02:50:08.152Z",
       "finishedAt": null,
-      "lastUpdate": "2026-05-12T02:50:06.123Z",
+      "lastUpdate": "2026-05-12T02:50:08.152Z",
       "note": "respawned by local-cli (was error; attempts=1)",
-      "attempts": 1,
+      "attempts": 2,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -51,6 +51,10 @@
     {
       "at": "2026-05-12T02:49:04.910Z",
       "message": "phase-a-truth-contracts: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    },
+    {
+      "at": "2026-05-12T02:50:07.797Z",
+      "message": "phase-a-truth-contracts: respawned by local-cli (was error)"
     }
   ]
 }
