@@ -15,13 +15,13 @@
       "handoffPath": "handoffs/phase-a-truth-contracts.md",
       "startedAt": "2026-05-12T02:50:08.152Z",
       "finishedAt": "2026-05-12T02:58:47.311Z",
-      "lastUpdate": "2026-05-12T02:58:47.311Z",
+      "lastUpdate": "2026-05-12T02:58:51.004Z",
       "note": "respawned by local-cli (was error; attempts=1)",
       "attempts": 2,
       "slackTs": null,
       "prNumber": 2,
       "failureMode": null,
-      "verification": null
+      "verification": "unit-test-verified"
     },
     {
       "name": "verify-phase-a",
@@ -34,17 +34,18 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "running",
       "resultStatus": null,
       "handoffPath": null,
-      "startedAt": null,
+      "startedAt": "2026-05-12T02:58:53.259Z",
       "finishedAt": null,
-      "lastUpdate": null,
+      "lastUpdate": "2026-05-12T02:58:53.259Z",
       "note": null,
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
-      "verification": null
+      "verification": null,
+      "attempts": 1
     }
   ],
   "attention": [
@@ -55,6 +56,10 @@
     {
       "at": "2026-05-12T02:50:07.797Z",
       "message": "phase-a-truth-contracts: respawned by local-cli (was error)"
+    },
+    {
+      "at": "2026-05-12T02:58:51.004Z",
+      "message": "phase-a-truth-contracts: verification self-reported (unit-test-verified)"
     }
   ]
 }
