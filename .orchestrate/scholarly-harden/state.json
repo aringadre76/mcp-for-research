@@ -1,0 +1,51 @@
+{
+  "rootSlug": "scholarly-harden",
+  "tasks": [
+    {
+      "name": "phase-a-truth-contracts",
+      "type": "worker",
+      "branch": "orch/scholarly-harden/phase-a-truth-contracts",
+      "startingRef": "main",
+      "dependsOn": [],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "running",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": "2026-05-12T02:48:53.801Z",
+      "finishedAt": null,
+      "lastUpdate": "2026-05-12T02:48:53.801Z",
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null,
+      "attempts": 1
+    },
+    {
+      "name": "verify-phase-a",
+      "type": "verifier",
+      "branch": "orch/scholarly-harden/verify-phase-a",
+      "startingRef": "orch/scholarly-harden/phase-a-truth-contracts",
+      "dependsOn": [
+        "phase-a-truth-contracts"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    }
+  ],
+  "attention": []
+}
