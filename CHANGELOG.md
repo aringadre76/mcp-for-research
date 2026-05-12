@@ -49,11 +49,14 @@ and this project follows standard release practices.
 
 ## [Unreleased]
 
-### Planned
-- JSTOR integration
-- Enhanced analytics and insights
-- Performance optimization
-- Additional data source adapters
+### Changed
+- **Tool schemas and descriptions**: `research_search` no longer advertises JSTOR; documents date and sort behavior, overrideSources behavior, source warnings, and search cache. `paper_analysis` limited to `basic` and `full-text` with real PMC excerpts, section heuristics, optional `textContains`, and ArXiv abstract-only full-text mode. `citation_manager` drops stub `related`; `generate` and `all` emit distinct APA, MLA, BibTeX, RIS, and EndNote tagged output. `research_preferences` fixes `export` double-encoding, accepts object or string for `import`, restores `get category all`, and documents in-process search cache TTL. `web_research` exposes only `scrape` and `search` with parameters the Firecrawl client implements.
+- **Preference-aware search**: Respects explicit `overrideSources` from `research_search` even when a source is disabled in saved preferences; optional bounded in-memory cache keyed to search options; failed sources append human-readable warnings; dedupe path now slices to `maxResults`.
+- **MCP server version**: Read from `package.json` at startup.
+- **Tests**: Jest ignores `run-tool-tests.js`; `npm test` runs Jest then `test:tools`. Added `citation-format` unit tests.
+
+### Removed
+- **JSTOR** from `research_search` source enum, default preferences source list, and package keywords (no adapter).
 
 ## Recent Releases
 

@@ -1,6 +1,6 @@
 # Scholarly Research MCP Server
 
-A powerful, consolidated research tool that helps you find and analyze academic research papers from PubMed, Google Scholar, ArXiv, and JSTOR through just 5 powerful tools.
+A powerful, consolidated research tool that helps you find and analyze academic research papers from PubMed, Google Scholar, and ArXiv, plus optional Firecrawl web search, through five MCP tools.
 
 [![NPM](https://img.shields.io/badge/npm-published-orange)](https://www.npmjs.com/package/scholarly-research-mcp)
 [![GitHub](https://img.shields.io/badge/github-repo-blue)](https://github.com/aringadre76/mcp-for-research)
@@ -10,16 +10,15 @@ A powerful, consolidated research tool that helps you find and analyze academic 
 
 This tool helps you:
 - **Find research papers** on any topic from multiple academic databases
-- **Read full papers** when available (not just abstracts)
-- **Extract key information** like quotes, statistics, and findings
-- **Get citations** in the format you need for your work
-- **Search within papers** to find specific information
+- **Read full papers** when PubMed Central text is available (plus abstract-only for other sources)
+- **Get citations** in common bibliographic formats
+- **Search within excerpts** using optional text filters on PMC-derived text
 - **Organize research** with customizable preferences
 
 ## Key Features
 
 - **5 Consolidated Tools**: Powerful, multi-functional tools instead of 24 separate ones
-- **Multi-Source Search**: PubMed, Google Scholar, ArXiv, and JSTOR
+- **Multi-Source Search**: PubMed, Google Scholar, and ArXiv
 - **User Preferences**: Customizable search and display settings
 - **Content Extraction**: Full-text paper access and analysis
 - **Citation Management**: Multiple citation format support
@@ -275,33 +274,29 @@ Paste this into the assistant’s MCP configuration and adjust paths/env vars if
 The server provides **5 consolidated MCP tools** that replace the previous 24 individual tools:
 
 ### 1. **`research_search`**
-Comprehensive research paper search across PubMed, Google Scholar, and ArXiv. Uses the preference-aware adapter: when Firecrawl is configured and the preference is set, Google Scholar can use Firecrawl instead of Puppeteer. JSTOR is accepted in `sources` but not implemented; if requested, a note is appended: "JSTOR is not implemented; results are from other sources."
+Search across PubMed, Google Scholar, and ArXiv. Uses the preference-aware adapter: when Firecrawl is configured and the preference is set, Google Scholar can use Firecrawl instead of Puppeteer. Requested sources are honored from the tool even if disabled in saved preferences. Failed sources surface warnings when adapters throw. Optional in-memory search cache follows `research_preferences` cache settings.
 
-**Parameters**: Query, sources (pubmed, google-scholar, arxiv, jstor), maxResults, startDate, endDate, journal, author, includeAbstracts, sortBy
+**Parameters**: Query, sources (`pubmed`, `google-scholar`, `arxiv`), maxResults, startDate, endDate, journal, author, includeAbstracts, sortBy
 
 ### 2. **`paper_analysis`**
-Get comprehensive paper information, full text, and analysis including quotes, statistics, and findings.
+Metadata plus optional PubMed PMC full-text excerpts (heuristic sections or plain excerpt), with optional `textContains` filtering. Non-PubMed records use abstract-only text when analysis type is `full-text`.
 
-**Combines**: Paper retrieval, content extraction, and analysis tools
-**Parameters**: Identifier, analysis type, quote limits, section lengths
+**Parameters**: Identifier (PMID, PMCID, DOI, ArXiv), `analysisType` (`basic` or `full-text`), `maxSectionLength`, `maxFullTextChars`, `textContains`
 
 ### 3. **`citation_manager`**
-Generate citations in multiple formats and get citation information including counts and related papers.
+Formatted citations (APA, MLA, BibTeX, RIS, EndNote tagged) and PubMed citation counts when a PMID exists. No related-paper discovery in this release.
 
-**Combines**: Citation tools, citation counting, and related paper discovery
-**Parameters**: Identifier, action, format, related paper limits
+**Parameters**: Identifier, action (`generate`, `count`, `all`), `format` when needed
 
 ### 4. **`research_preferences`**
-Manage research preferences including source priorities, search settings, display options, and caching.
+Persisted preferences (sources, search defaults, display formatting for adapters, cache TTL for in-process `research_search` caching).
 
-**Combines**: All preference management tools
-**Parameters**: Action, category, various preference values
+**Parameters**: Action, category, values for updates; import accepts JSON string or object
 
 ### 5. **`web_research`**
-Perform web-based research using Firecrawl for reliable content extraction and analysis.
+Firecrawl-backed **scrape** (single URL) and **search** (open web). Requires `FIRECRAWL_API_KEY`.
 
-**Requires**: Set `FIRECRAWL_API_KEY` for scrape and search. Extract, map, and crawl are not implemented; use scrape or search.
-**Parameters**: Action (scrape, search, extract, map, crawl), url, query, maxResults, formats, onlyMainContent, waitFor
+**Parameters**: `action` (`scrape` | `search`), `url` or `query`, optional `maxResults`, `formats`, `onlyMainContent`, `waitFor`, `actions`
 
 ## Usage Examples
 
@@ -329,8 +324,8 @@ Perform web-based research using Firecrawl for reliable content extraction and a
     "name": "paper_analysis",
     "arguments": {
       "identifier": "12345678",
-      "analysisType": "complete",
-      "maxQuotes": 20
+      "analysisType": "full-text",
+      "maxFullTextChars": 4000
     }
   }
 }

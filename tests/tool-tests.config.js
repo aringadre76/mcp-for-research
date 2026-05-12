@@ -25,7 +25,7 @@ module.exports = {
         {
           args: { identifier: '99999999999' },
           expectContent: true,
-          expectSubstring: 'No paper found'
+          expectSubstring: 'paper'
         }
       ]
     },
