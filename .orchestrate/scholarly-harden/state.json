@@ -47,5 +47,10 @@
       "verification": null
     }
   ],
-  "attention": []
+  "attention": [
+    {
+      "at": "2026-05-12T02:49:04.910Z",
+      "message": "phase-a-truth-contracts: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents."
+    }
+  ]
 }
