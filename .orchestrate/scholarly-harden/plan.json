@@ -9,6 +9,7 @@
     {
       "name": "phase-a-truth-contracts",
       "type": "worker",
+      "model": "composer-2-fast",
       "scopedGoal": "Phase A only (schema honesty): audit research_search, paper_analysis, citation_manager, research_preferences, web_research vs code; align Zod + tool descriptions with behavior; JSTOR / Firecrawl / prefs per root goal. Small PR(s), npm run build && npm test green, CHANGELOG for user-visible changes.",
       "openPR": true,
       "verify": "build+test green; schemas and descriptions match implementation for touched tools."
@@ -16,6 +17,7 @@
     {
       "name": "verify-phase-a",
       "type": "verifier",
+      "model": "claude-opus-4-7",
       "verifies": "phase-a-truth-contracts",
       "dependsOn": [
         "phase-a-truth-contracts"
