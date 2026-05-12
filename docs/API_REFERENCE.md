@@ -1,10 +1,8 @@
 # API Reference
 
-This document provides comprehensive technical details for all MCP tools available in the Scholarly Research MCP Server. The consolidated tools research_search and web_research support Firecrawl when FIRECRAWL_API_KEY is set. JSTOR is not implemented; research_search adds a note when JSTOR is requested. web_research implements scrape and search only.
+This file mixes legacy documentation with the current product. The running server exposes **five** consolidated MCP tools in `src/index.ts`: `research_search`, `paper_analysis`, `citation_manager`, `research_preferences`, and `web_research`. PubMed, ArXiv, and Google Scholar are supported for scholarly search. JSTOR is not a query source. `web_research` supports **scrape** and **search** only (Firecrawl v2 client). Zod schemas in `src/index.ts` are authoritative.
 
-## Tool Categories
-
-The server provides 24 MCP tools organized into the following categories:
+## Current consolidated tools (authoritative schemas in src/index.ts)
 - **Paper Discovery**: Search and retrieve papers
 - **Content Analysis**: Extract and analyze paper content
 - **Google Scholar Integration**: Web scraping capabilities

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PubMedAdapter } from './adapters/pubmed';
@@ -11,11 +13,18 @@ import { PreferenceAwareUnifiedSearchAdapter } from './adapters/preference-aware
 import { getFirecrawlClientFromEnv } from './adapters/firecrawl-api-client';
 import { UserPreferencesManager } from './preferences/user-preferences';
 import { z } from 'zod';
+import { resolveScholarlyPaper } from './utils/resolve-scholarly-paper';
+import { formatCitationWork, paperToCitableWork } from './utils/citation-format';
+import { isLikelyArxivId } from './utils/identifiers';
+
+const SERVER_VERSION = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')
+).version as string;
 
 async function main() {
   const mcpServer = new McpServer({
     name: 'scholarly-research-mcp',
-    version: '2.0.2',
+    version: SERVER_VERSION,
   });
 
   const firecrawlClient = getFirecrawlClientFromEnv();
@@ -30,17 +39,17 @@ async function main() {
 
   mcpServer.tool(
     'research_search',
-    'Comprehensive research paper search across multiple sources with advanced filtering and unified results',
+    'Search PubMed, Google Scholar, and ArXiv. This tool passes overrideSources so the sources you list are queried even when a source is disabled in saved preferences. Date filters: startDate is passed to PubMed mindate as given (prefer YYYY/MM/DD). endDate supplies the publication year for ArXiv and Google Scholar (first path segment, e.g. YYYY from YYYY/MM/DD) and PubMed maxdate as that year string. sortBy citations mainly affects Google Scholar; ArXiv has no citation metadata here. Google Scholar may be blocked; partial failures appear under Source warnings when adapters throw. In-memory search caching applies when research_preferences cache.enabled is true (TTL from preferences).',
     {
       query: z.string().describe('Search query for papers'),
-      maxResults: z.number().optional().describe('Maximum number of results (default: 20)'),
-      startDate: z.string().optional().describe('Start date for publication range (YYYY/MM/DD format)'),
-      endDate: z.string().optional().describe('End date for publication range (YYYY/MM/DD format)'),
-      journal: z.string().optional().describe('Filter by specific journal'),
-      author: z.string().optional().describe('Filter by specific author'),
-      sources: z.array(z.enum(['pubmed', 'google-scholar', 'arxiv', 'jstor'])).optional().describe('Sources to search (default: all)'),
-      includeAbstracts: z.boolean().optional().describe('Include paper abstracts in results (default: true)'),
-      sortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Sort order (default: relevance)')
+      maxResults: z.number().optional().describe('Maximum number of results after merge (default: 20)'),
+      startDate: z.string().optional().describe('Start publication bound for PubMed mindate (YYYY/MM/DD recommended)'),
+      endDate: z.string().optional().describe('End publication bound; year segment filters ArXiv and Scholar; PubMed uses the same year string as maxdate'),
+      journal: z.string().optional().describe('Filter by journal (PubMed query fragment)'),
+      author: z.string().optional().describe('Filter by author (PubMed query fragment)'),
+      sources: z.array(z.enum(['pubmed', 'google-scholar', 'arxiv'])).optional().describe('Sources to search (default: all three)'),
+      includeAbstracts: z.boolean().optional().describe('Include truncated abstracts in results (default: true)'),
+      sortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Result sort: relevance preserves per-source order where applicable; date by publication string; citations by Scholar count when present')
     },
     async ({ query, maxResults = 20, startDate, endDate, journal, author, sources = ['pubmed', 'google-scholar', 'arxiv'], includeAbstracts = true, sortBy = 'relevance' }) => {
       try {
@@ -51,17 +60,16 @@ async function main() {
             ]
           };
         }
-        const effectiveSources = sources.filter((s) => s !== 'jstor');
-        const jstorRequested = sources.includes('jstor');
-        const searchSources = effectiveSources.length > 0 ? effectiveSources : ['pubmed', 'google-scholar', 'arxiv'];
+        const searchSources = sources.length > 0 ? sources : ['pubmed', 'google-scholar', 'arxiv'];
         const prefs = preferencesManager.getPreferences();
         const endYear = endDate ? parseInt(endDate.split('/')[0], 10) : undefined;
+        const NaNGuard = endYear !== undefined && Number.isNaN(endYear) ? undefined : endYear;
 
-        const allPapers = await preferenceAwareAdapter.searchPapers({
+        const { papers: allPapers, sourceNotes } = await preferenceAwareAdapter.searchPapersWithNotes({
           query,
           maxResults,
           startDate,
-          endDate: endYear,
+          endDate: NaNGuard,
           journal,
           author,
           sources: searchSources,
@@ -71,13 +79,14 @@ async function main() {
           overrideSources: searchSources
         });
 
+        const notesBlock = sourceNotes.length > 0 ? `\n\nSource warnings:\n${sourceNotes.map((n) => `- ${n}`).join('\n')}` : '';
+
         if (allPapers.length === 0) {
-          const jstorNote = jstorRequested ? '\n\nJSTOR is not implemented; results are from other sources.' : '';
           return {
             content: [
               {
                 type: 'text',
-                text: 'No papers found matching your search criteria.' + jstorNote
+                text: 'No papers found matching your search criteria.' + notesBlock
               }
             ]
           };
@@ -96,12 +105,11 @@ async function main() {
 `;
         }).join('\n');
 
-        const jstorNote = jstorRequested ? '\n\nJSTOR is not implemented; results are from other sources.' : '';
         return {
           content: [
             {
               type: 'text',
-              text: `Found ${allPapers.length} papers from ${searchSources.join(', ')}:\n\n${resultsText}${jstorNote}`
+              text: `Found ${allPapers.length} papers from ${searchSources.join(', ')}:\n\n${resultsText}${notesBlock}`
             }
           ]
         };
@@ -120,35 +128,35 @@ async function main() {
 
   mcpServer.tool(
     'paper_analysis',
-    'Get comprehensive paper information, full text, and analysis including quotes, statistics, and findings',
+    'Retrieve metadata and optional full text for one paper. Identifiers: PMID (digits), PMCID (PMC plus digits), DOI (10.... or doi:...), ArXiv (YYYY.NNNNN, arxiv:..., or legacy category/number with slash). basic returns metadata and abstract only. full-text loads PubMed PMC text when available, splits heuristic sections capped by maxSectionLength, and otherwise shows a whitespace-normalized excerpt up to maxFullTextChars. textContains optionally keeps sentences containing that substring (case-insensitive). Non-PubMed records return abstract-only text for full-text mode.',
     {
-      identifier: z.string().describe('Paper identifier (PMID, PMCID, DOI, or ArXiv ID)'),
-      analysisType: z.enum(['basic', 'full-text', 'quotes', 'statistics', 'findings', 'complete']).optional().describe('Type of analysis to perform (default: complete)'),
-      maxQuotes: z.number().optional().describe('Maximum number of quotes to extract (default: 15)'),
-      maxSectionLength: z.number().optional().describe('Maximum length of each section (default: 1000 characters)')
+      identifier: z.string().describe('PMID, PMCID, DOI, or ArXiv ID'),
+      analysisType: z.enum(['basic', 'full-text']).optional().describe('basic (default) or full-text excerpt'),
+      maxSectionLength: z.number().optional().describe('Max characters per detected section when PMC text is available (default: 1000)'),
+      maxFullTextChars: z.number().optional().describe('Max characters for combined excerpt when sections are not used (default: 8000)'),
+      textContains: z.string().optional().describe('Optional filter: prefer sentences containing this substring in excerpts')
     },
-    async ({ identifier, analysisType = 'complete', maxQuotes = 15, maxSectionLength = 1000 }) => {
+    async ({ identifier, analysisType = 'basic', maxSectionLength = 1000, maxFullTextChars = 8000, textContains }) => {
       try {
-        let paper;
-        
-        if (identifier.startsWith('PMC')) {
-          paper = await pubmedAdapter.getPaperByPMCID(identifier);
-        } else if (identifier.startsWith('PMC') || /^\d+$/.test(identifier)) {
-          paper = await pubmedAdapter.getPaperById(identifier);
-        } else if (identifier.startsWith('10.') || identifier.startsWith('doi:')) {
-          paper = await pubmedAdapter.getPaperById(identifier.replace('doi:', ''));
-        } else if (identifier.startsWith('arxiv:') || identifier.includes('/')) {
-          paper = await arxivAdapter.getPaperById(identifier);
-        } else {
+        const trimmed = identifier.trim();
+        const looksValid =
+          /^pmc/i.test(trimmed) ||
+          /^10\./.test(trimmed) ||
+          /^doi:/i.test(trimmed) ||
+          isLikelyArxivId(trimmed) ||
+          /^\d+$/.test(trimmed);
+        if (!looksValid) {
           return {
             content: [
               {
                 type: 'text',
-                text: `Invalid identifier format. Please use PMID, PMCID, DOI, or ArXiv ID.`
+                text: 'Invalid identifier format. Use PMID, PMCID, DOI, or ArXiv ID (including bare YYYY.NNNNN).'
               }
             ]
           };
         }
+
+        const paper = await resolveScholarlyPaper(identifier, pubmedAdapter, arxivAdapter);
 
         if (!paper) {
           return {
@@ -161,9 +169,9 @@ async function main() {
           };
         }
 
-        const journalLine = 'journal' in paper ? paper.journal : (paper as { journal?: string }).journal ?? 'N/A';
-        const pmidLine = 'pmid' in paper ? paper.pmid : (paper as { pmid?: string }).pmid ?? 'N/A';
-        const pmcidLine = 'pmcid' in paper ? (paper as { pmcid?: string }).pmcid : (paper as { pmcid?: string }).pmcid ?? 'None';
+        const journalLine = 'journal' in paper ? paper.journal : 'N/A';
+        const pmidLine = 'pmid' in paper ? paper.pmid : 'N/A';
+        const pmcidLine = 'pmcid' in paper && paper.pmcid ? paper.pmcid : 'None';
         let analysisText = `**${paper.title}**
 - Authors: ${paper.authors.join(', ')}
 - Journal: ${journalLine}
@@ -173,29 +181,62 @@ async function main() {
 - DOI: ${paper.doi || 'None'}
 - Abstract: ${paper.abstract || 'Not available'}`;
 
-        if (analysisType === 'full-text' || analysisType === 'complete') {
-          try {
-            if ('pmid' in paper) {
-              const fullText = await pubmedAdapter.getFullTextContent(paper.pmid, (paper as { pmcid?: string }).pmcid);
-              if (fullText) {
-                analysisText += `\n\n**Full Text (Excerpt)**\n${fullText.substring(0, 2000)}...`;
+        if (analysisType === 'full-text') {
+          if ('pmid' in paper && paper.pmid) {
+            try {
+              const sections = await pubmedAdapter.extractPaperSections(
+                paper.pmid,
+                maxSectionLength,
+                paper.pmcid
+              );
+              if (sections.length > 0) {
+                let block = sections.map((s) => `### ${s.title}\n${s.content}`).join('\n\n');
+                if (textContains && textContains.trim()) {
+                  const needle = textContains.toLowerCase();
+                  const lines = block.split('\n').filter((line) => line.toLowerCase().includes(needle));
+                  if (lines.length > 0) {
+                    block = lines.join('\n');
+                  }
+                }
+                const clipped = block.length > maxFullTextChars ? `${block.slice(0, maxFullTextChars)}\n...` : block;
+                analysisText += `\n\n**Full text (structured excerpts)**\n${clipped}`;
+              } else {
+                const fullText = await pubmedAdapter.getFullTextContent(paper.pmid, paper.pmcid);
+                let excerpt = fullText ? fullText.replace(/\s+/g, ' ').trim() : '';
+                if (textContains && textContains.trim() && excerpt) {
+                  const needle = textContains.toLowerCase();
+                  const chunks = excerpt.split(/(?<=[.!?])\s+/);
+                  const matched = chunks.filter((c) => c.toLowerCase().includes(needle));
+                  if (matched.length > 0) {
+                    excerpt = matched.join(' ');
+                  }
+                }
+                if (excerpt) {
+                  const clipped =
+                    excerpt.length > maxFullTextChars ? `${excerpt.slice(0, maxFullTextChars)}...` : excerpt;
+                  analysisText += `\n\n**Full text (excerpt)**\n${clipped}`;
+                } else {
+                  analysisText += '\n\n**Full text**: Not available from PMC or fallbacks for this record.';
+                }
+              }
+            } catch (error) {
+              analysisText += `\n\n**Full text**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
+            }
+          } else if (paper.abstract) {
+            let body = paper.abstract.replace(/\s+/g, ' ').trim();
+            if (textContains && textContains.trim()) {
+              const needle = textContains.toLowerCase();
+              const chunks = body.split(/(?<=[.!?])\s+/);
+              const matched = chunks.filter((c) => c.toLowerCase().includes(needle));
+              if (matched.length > 0) {
+                body = matched.join(' ');
               }
             }
-          } catch (error) {
-            analysisText += `\n\n**Full Text**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
+            const clipped = body.length > maxFullTextChars ? `${body.slice(0, maxFullTextChars)}...` : body;
+            analysisText += `\n\n**Body (abstract only for this source)**\n${clipped}`;
+          } else {
+            analysisText += '\n\n**Full text**: Metadata-only record; no abstract or PMC text for this tool to show.';
           }
-        }
-
-        if (analysisType === 'quotes' || analysisType === 'complete') {
-          analysisText += `\n\n**Key Quotes and Evidence**: Not available (extraction not implemented)`;
-        }
-
-        if (analysisType === 'statistics' || analysisType === 'complete') {
-          analysisText += `\n\n**Key Statistics**: Not available (extraction not implemented)`;
-        }
-
-        if (analysisType === 'findings' || analysisType === 'complete') {
-          analysisText += `\n\n**Key Findings**: Not available (extraction not implemented)`;
         }
 
         return {
@@ -221,35 +262,33 @@ async function main() {
 
   mcpServer.tool(
     'citation_manager',
-    'Generate citations in multiple formats and get citation information including counts and related papers',
+    'Build citations and optional PubMed citation counts. Identifiers match paper_analysis. generate and all require format (apa, mla, bibtex, ris, endnote). Each format uses distinct punctuation and fields. count queries NCBI for linkouts when a PMID exists. all runs formatted output plus the count. Related-paper discovery is not available in this release.',
     {
-      identifier: z.string().describe('Paper identifier (PMID, PMCID, DOI, or ArXiv ID)'),
-      action: z.enum(['generate', 'count', 'related', 'all']).describe('Action to perform'),
-      format: z.enum(['apa', 'mla', 'bibtex', 'endnote', 'ris']).optional().describe('Citation format (required for generate action)'),
-      maxRelated: z.number().optional().describe('Maximum number of related papers (default: 10)')
+      identifier: z.string().describe('PMID, PMCID, DOI, or ArXiv ID'),
+      action: z.enum(['generate', 'count', 'all']).describe('generate formatted citation; count PubMed-linked count; all both'),
+      format: z.enum(['apa', 'mla', 'bibtex', 'endnote', 'ris']).optional().describe('Required when action is generate or all')
     },
-    async ({ identifier, action, format, maxRelated = 10 }) => {
+    async ({ identifier, action, format }) => {
       try {
-        let paper;
-        
-        if (identifier.startsWith('PMC')) {
-          paper = await pubmedAdapter.getPaperByPMCID(identifier);
-        } else if (identifier.startsWith('PMC') || /^\d+$/.test(identifier)) {
-          paper = await pubmedAdapter.getPaperById(identifier);
-        } else if (identifier.startsWith('10.') || identifier.startsWith('doi:')) {
-          paper = await pubmedAdapter.getPaperById(identifier.replace('doi:', ''));
-        } else if (identifier.startsWith('arxiv:') || identifier.includes('/')) {
-          paper = await arxivAdapter.getPaperById(identifier);
-        } else {
+        const trimmed = identifier.trim();
+        const looksValid =
+          /^pmc/i.test(trimmed) ||
+          /^10\./.test(trimmed) ||
+          /^doi:/i.test(trimmed) ||
+          isLikelyArxivId(trimmed) ||
+          /^\d+$/.test(trimmed);
+        if (!looksValid) {
           return {
             content: [
               {
                 type: 'text',
-                text: `Invalid identifier format. Please use PMID, PMCID, DOI, or ArXiv ID.`
+                text: 'Invalid identifier format. Use PMID, PMCID, DOI, or ArXiv ID (including bare YYYY.NNNNN).'
               }
             ]
           };
         }
+
+        const paper = await resolveScholarlyPaper(identifier, pubmedAdapter, arxivAdapter);
 
         if (!paper) {
           return {
@@ -263,14 +302,14 @@ async function main() {
         }
 
         const paperJournal = 'journal' in paper ? paper.journal : 'N/A';
-        const paperPmid = 'pmid' in paper ? (paper as { pmid: string }).pmid : 'N/A';
-        const paperPmcid = 'pmcid' in paper ? (paper as { pmcid?: string }).pmcid : 'None';
+        const paperPmid = 'pmid' in paper ? paper.pmid : 'N/A';
+        const paperPmcid = 'pmcid' in paper && paper.pmcid ? paper.pmcid : 'None';
         let resultText = `**${paper.title}**
 - Authors: ${paper.authors.join(', ')}
 - Journal: ${paperJournal}
 - Publication Date: ${paper.publicationDate}
 - PMID: ${paperPmid}
-- PMC ID: ${paperPmcid || 'None'}
+- PMC ID: ${paperPmcid}
 - DOI: ${paper.doi || 'None'}`;
 
         if (action === 'generate' || action === 'all') {
@@ -279,38 +318,32 @@ async function main() {
               content: [
                 {
                   type: 'text',
-                  text: 'Format parameter is required for generate action. Please specify apa, mla, bibtex, endnote, or ris.'
+                  text: 'Format is required for generate and all. Choose apa, mla, bibtex, endnote, or ris.'
                 }
               ]
             };
           }
 
           try {
-            if (!('pmid' in paper)) throw new Error('Citation generation only supported for PubMed papers');
-            const citationCount = await pubmedAdapter.getCitationCount(paper.pmid);
-            const citedBy = citationCount != null ? ' Cited by ' + citationCount + '.' : '';
-            const citation = paper.authors.join(', ') + ' (' + paper.publicationDate + '). ' + paper.title + '. ' + paper.journal + '. PMID: ' + paper.pmid + '.' + citedBy;
-            resultText += '\n\n**Citation (' + format.toUpperCase() + ')**\n' + citation;
+            const work = paperToCitableWork(paper);
+            const citation = formatCitationWork(work, format);
+            resultText += `\n\n**${format.toUpperCase()}**\n${citation}`;
           } catch (error) {
-            resultText += '\n\n**Citation (' + format.toUpperCase() + ')**: Not available (' + (error instanceof Error ? error.message : 'Unknown error') + ')';
+            resultText += `\n\n**${format.toUpperCase()}**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
           }
         }
 
         if (action === 'count' || action === 'all') {
           try {
             if ('pmid' in paper) {
-              const citationCount = await pubmedAdapter.getCitationCount((paper as { pmid: string }).pmid);
+              const citationCount = await pubmedAdapter.getCitationCount(paper.pmid);
               resultText += `\n\n**Citation Count**: ${citationCount}`;
             } else {
-              resultText += '\n\n**Citation Count**: Not available (not a PubMed paper)';
+              resultText += '\n\n**Citation Count**: Only available for PubMed records with a PMID.';
             }
           } catch (error) {
             resultText += `\n\n**Citation Count**: Not available (${error instanceof Error ? error.message : 'Unknown error'})`;
           }
-        }
-
-        if (action === 'related' || action === 'all') {
-          resultText += `\n\n**Related Papers**: Not available (not implemented)`;
         }
 
         return {
@@ -336,25 +369,25 @@ async function main() {
 
   mcpServer.tool(
     'research_preferences',
-    'Manage research preferences including source priorities, search settings, display options, and caching',
+    'Read or update persisted preferences on disk under ~/.mcp-scholarly-research/preferences.json. Source list supports pubmed, google-scholar, arxiv only (no JSTOR adapter). cache.enabled and ttlMinutes back an in-memory bounded cache used by research_search through PreferenceAwareUnifiedSearchAdapter. Display toggles affect adapter formatters, not the MCP research_search text path.',
     {
       action: z.enum(['get', 'set', 'reset', 'export', 'import']).describe('Action to perform'),
       category: z.enum(['source', 'search', 'display', 'cache', 'all']).optional().describe('Preference category to manage'),
-      preferences: z.any().optional().describe('Preferences to set (JSON object for set/import actions)'),
-      sourceName: z.string().optional().describe('Source name for source-specific preferences'),
+      preferences: z.union([z.string(), z.record(z.unknown())]).optional().describe('JSON string or object for import'),
+      sourceName: z.string().optional().describe('Source name: pubmed, google-scholar, or arxiv'),
       enabled: z.boolean().optional().describe('Whether to enable a source'),
       priority: z.number().optional().describe('Priority order (1 is highest)'),
       maxResults: z.number().optional().describe('Maximum results to fetch'),
       defaultMaxResults: z.number().optional().describe('Default maximum number of results'),
       defaultSortBy: z.enum(['relevance', 'date', 'citations']).optional().describe('Default sort order'),
-      preferFirecrawl: z.boolean().optional().describe('Prefer Firecrawl over Puppeteer for Google Scholar'),
-      enableDeduplication: z.boolean().optional().describe('Enable deduplication of results across sources'),
-      showAbstracts: z.boolean().optional().describe('Whether to show abstracts in results'),
-      showCitations: z.boolean().optional().describe('Whether to show citation counts'),
-      showUrls: z.boolean().optional().describe('Whether to show URLs'),
-      maxAbstractLength: z.number().optional().describe('Maximum length of abstracts to display'),
-      cacheEnabled: z.boolean().optional().describe('Enable result caching'),
-      cacheExpiry: z.number().optional().describe('Cache expiry time in hours')
+      preferFirecrawl: z.boolean().optional().describe('Prefer Firecrawl over Puppeteer for Google Scholar when FIRECRAWL_API_KEY is set'),
+      enableDeduplication: z.boolean().optional().describe('Enable deduplication of unified search results'),
+      showAbstracts: z.boolean().optional().describe('Whether adapters should include abstracts when formatting'),
+      showCitations: z.boolean().optional().describe('Whether adapters should show citation counts when formatting'),
+      showUrls: z.boolean().optional().describe('Whether adapters should show URLs when formatting'),
+      maxAbstractLength: z.number().optional().describe('Maximum length of abstracts in adapter formatting'),
+      cacheEnabled: z.boolean().optional().describe('Enable in-memory research_search cache'),
+      cacheExpiry: z.number().optional().describe('Cache TTL in hours (converted to minutes internally)')
     },
     async (params) => {
       try {
@@ -363,11 +396,52 @@ async function main() {
         switch (action) {
           case 'get': {
             const getCategory = category;
-            const wantAll = getCategory === 'all';
-            if (getCategory === 'source' || wantAll) {
+            if (getCategory === 'all') {
+              const prefs = preferencesManager.getPreferences();
+              const sourceText = prefs.search.sources
+                .map(
+                  (s: { name: string; enabled: boolean; priority: number; maxResults?: number }) =>
+                    `- ${s.name}: ${s.enabled ? 'Enabled' : 'Disabled'} (Priority: ${s.priority}, Max Results: ${
+                      s.maxResults ?? 20
+                    })`
+                )
+                .join('\n');
+              const sp = prefs.search;
+              const dp = prefs.display;
+              const cp = prefs.cache;
+              const combined = `**Source Preferences**
+${sourceText}
+
+**Search Preferences**
+- Default Max Results: ${sp.defaultMaxResults}
+- Default Sort By: ${sp.defaultSortBy}
+- Prefer Firecrawl: ${sp.preferFirecrawl}
+- Enable Deduplication: ${sp.enableDeduplication}
+
+**Display Preferences**
+- Show Abstracts: ${dp.showAbstracts}
+- Show Citations: ${dp.showCitations}
+- Show URLs: ${dp.showUrls}
+- Max Abstract Length: ${dp.maxAbstractLength}
+
+**Cache Preferences** (research_search in-process; max 32 entries)
+- Cache Enabled: ${cp.enabled}
+- Cache Expiry: ${Math.round(cp.ttlMinutes / 60)} hours (${cp.ttlMinutes} minutes)`;
+              return {
+                content: [{ type: 'text', text: combined }]
+              };
+            }
+            if (getCategory === 'source') {
               const prefs = preferencesManager.getPreferences();
               const sourceList = prefs.search.sources;
-              const sourceText = sourceList.map((s: { name: string; enabled: boolean; priority: number; maxResults?: number }) => `- ${s.name}: ${s.enabled ? 'Enabled' : 'Disabled'} (Priority: ${s.priority}, Max Results: ${s.maxResults ?? 20})`).join('\n');
+              const sourceText = sourceList
+                .map(
+                  (s: { name: string; enabled: boolean; priority: number; maxResults?: number }) =>
+                    `- ${s.name}: ${s.enabled ? 'Enabled' : 'Disabled'} (Priority: ${s.priority}, Max Results: ${
+                      s.maxResults ?? 20
+                    })`
+                )
+                .join('\n');
               return {
                 content: [
                   {
@@ -377,8 +451,8 @@ async function main() {
                 ]
               };
             }
-            
-            if (getCategory === 'search' || wantAll) {
+
+            if (getCategory === 'search') {
               const searchPrefs = preferencesManager.getPreferences().search;
               return {
                 content: [
@@ -393,8 +467,8 @@ async function main() {
                 ]
               };
             }
-            
-            if (getCategory === 'display' || wantAll) {
+
+            if (getCategory === 'display') {
               const displayPrefs = preferencesManager.getPreferences().display;
               return {
                 content: [
@@ -409,21 +483,21 @@ async function main() {
                 ]
               };
             }
-            
-            if (getCategory === 'cache' || wantAll) {
+
+            if (getCategory === 'cache') {
               const cachePrefs = preferencesManager.getPreferences().cache;
               return {
                 content: [
                   {
                     type: 'text',
-                    text: `**Cache Preferences**
+                    text: `**Cache Preferences** (research_search in-process; max 32 entries)
 - Cache Enabled: ${cachePrefs.enabled}
-- Cache Expiry: ${Math.round(cachePrefs.ttlMinutes / 60)} hours`
+- Cache Expiry: ${Math.round(cachePrefs.ttlMinutes / 60)} hours (${cachePrefs.ttlMinutes} minutes)`
                   }
                 ]
               };
             }
-            
+
             return {
               content: [
                 {
@@ -520,7 +594,7 @@ async function main() {
               ]
             };
 
-          case 'export':
+          case 'export': {
             const exportedPrefs = preferencesManager.exportPreferences();
             return {
               content: [
@@ -528,13 +602,14 @@ async function main() {
                   type: 'text',
                   text: `**Exported Preferences**
 \`\`\`json
-${JSON.stringify(exportedPrefs, null, 2)}
+${exportedPrefs}
 \`\`\``
                 }
               ]
             };
+          }
 
-          case 'import':
+          case 'import': {
             if (!preferences) {
               return {
                 content: [
@@ -545,7 +620,7 @@ ${JSON.stringify(exportedPrefs, null, 2)}
                 ]
               };
             }
-            
+
             await preferencesManager.importPreferences(preferences);
             return {
               content: [
@@ -555,6 +630,7 @@ ${JSON.stringify(exportedPrefs, null, 2)}
                 }
               ]
             };
+          }
 
           default:
             return {
@@ -581,25 +657,24 @@ ${JSON.stringify(exportedPrefs, null, 2)}
 
   mcpServer.tool(
     'web_research',
-    'Perform web-based research using Firecrawl for reliable content extraction and analysis',
+    'Requires FIRECRAWL_API_KEY. Only scrape (GET-like markdown for one URL) and search (Firecrawl web search with optional per-result scrape options) are implemented. The bundled client POSTs to Firecrawl v2 /scrape and /search; unsupported parameters from older docs are omitted here so models are not misled.',
     {
-      action: z.enum(['scrape', 'search', 'extract', 'map', 'crawl']).describe('Action to perform'),
-      url: z.string().optional().describe('URL to scrape or starting URL for mapping/crawling'),
-      query: z.string().optional().describe('Search query for web search'),
-      urls: z.array(z.string()).optional().describe('Array of URLs for batch operations'),
-      prompt: z.string().optional().describe('Prompt for content extraction'),
-      schema: z.any().optional().describe('JSON schema for structured extraction'),
-      maxResults: z.number().optional().describe('Maximum number of results (default: 5)'),
-      formats: z.array(z.string()).optional().describe('Content formats to extract (default: markdown)'),
-      onlyMainContent: z.boolean().optional().describe('Extract only main content (default: true)'),
-      waitFor: z.number().optional().describe('Time to wait for dynamic content in milliseconds'),
-      actions: z.array(z.any()).optional().describe('Actions to perform before scraping'),
-      mobile: z.boolean().optional().describe('Use mobile viewport (default: false)'),
-      maxAge: z.number().optional().describe('Maximum age for cached content in milliseconds (default: 172800000)'),
-      maxDiscoveryDepth: z.number().optional().describe('Maximum discovery depth for crawling (default: 5)'),
-      limit: z.number().optional().describe('Maximum number of pages to crawl (default: 10000)'),
-      allowExternalLinks: z.boolean().optional().describe('Allow crawling external links (default: false)'),
-      deduplicateSimilarURLs: z.boolean().optional().describe('Remove similar URLs during crawl (default: true)')
+      action: z.enum(['scrape', 'search']).describe('scrape a single URL or search the open web'),
+      url: z.string().optional().describe('Absolute http(s) URL for scrape'),
+      query: z.string().optional().describe('Search query for search'),
+      maxResults: z.number().optional().describe('Maximum hits for search (default: 5)'),
+      formats: z.array(z.string()).optional().describe('Firecrawl format names, default [markdown]'),
+      onlyMainContent: z.boolean().optional().describe('Strip boilerplate when true (default true)'),
+      waitFor: z.number().optional().describe('Milliseconds to wait on page before scrape'),
+      actions: z
+        .array(
+          z.discriminatedUnion('type', [
+            z.object({ type: z.literal('wait'), milliseconds: z.number().optional() }),
+            z.object({ type: z.literal('scrape') })
+          ])
+        )
+        .optional()
+        .describe('Limited pre-scrape waits forwarded to Firecrawl')
     },
     async (params) => {
       try {
@@ -608,7 +683,7 @@ ${JSON.stringify(exportedPrefs, null, 2)}
             content: [
               {
                 type: 'text',
-                text: 'Firecrawl is not configured. Set FIRECRAWL_API_KEY or provide a Firecrawl client to enable web research.'
+                text: 'Firecrawl is not configured. Set FIRECRAWL_API_KEY in the environment to enable web research.'
               }
             ]
           };
@@ -619,22 +694,25 @@ ${JSON.stringify(exportedPrefs, null, 2)}
           case 'scrape': {
             if (!otherParams.url) {
               return {
-                content: [{ type: 'text', text: 'URL is required for scraping action.' }]
+                content: [{ type: 'text', text: 'url is required for scrape.' }]
               };
             }
             const scrapeResult = await firecrawlClient.firecrawl_scrape({
               url: otherParams.url,
-              formats: otherParams.formats || ['markdown'],
+              formats: otherParams.formats && otherParams.formats.length > 0 ? otherParams.formats : ['markdown'],
               onlyMainContent: otherParams.onlyMainContent !== false,
               waitFor: otherParams.waitFor,
               actions: otherParams.actions
             });
-            const preview = scrapeResult.content.length > 8000 ? scrapeResult.content.slice(0, 8000) + '\n\n[... truncated]' : scrapeResult.content;
+            const preview =
+              scrapeResult.content.length > 8000
+                ? scrapeResult.content.slice(0, 8000) + '\n\n[... truncated]'
+                : scrapeResult.content;
             return {
               content: [
                 {
                   type: 'text',
-                  text: `**Web Scraping Result**\nURL: ${otherParams.url}\n\n${preview}`
+                  text: `**Web scrape**\nURL: ${otherParams.url}\n\n${preview}`
                 }
               ]
             };
@@ -643,7 +721,7 @@ ${JSON.stringify(exportedPrefs, null, 2)}
           case 'search': {
             if (!otherParams.query) {
               return {
-                content: [{ type: 'text', text: 'Query is required for search action.' }]
+                content: [{ type: 'text', text: 'query is required for search.' }]
               };
             }
             const searchResult = await firecrawlClient.firecrawl_search({
@@ -651,7 +729,7 @@ ${JSON.stringify(exportedPrefs, null, 2)}
               limit: otherParams.maxResults ?? 5,
               sources: ['web'],
               scrapeOptions: {
-                formats: otherParams.formats || ['markdown'],
+                formats: otherParams.formats && otherParams.formats.length > 0 ? otherParams.formats : ['markdown'],
                 onlyMainContent: otherParams.onlyMainContent !== false
               }
             });
@@ -665,33 +743,18 @@ ${JSON.stringify(exportedPrefs, null, 2)}
               content: [
                 {
                   type: 'text',
-                  text: `**Web Search Result**\nQuery: ${otherParams.query}\n\n${lines.join('\n\n')}`
+                  text: `**Web search**\nQuery: ${otherParams.query}\n\n${lines.join('\n\n')}`
                 }
               ]
             };
           }
 
-          case 'extract':
-          case 'map':
-          case 'crawl':
+          default: {
+            const _: never = action;
             return {
-              content: [
-                {
-                  type: 'text',
-                  text: 'Not implemented for this server; use scrape or search.'
-                }
-              ]
+              content: [{ type: 'text', text: `Invalid action: ${String(_)}` }]
             };
-
-          default:
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: 'Invalid action. Please use: scrape, search, extract, map, or crawl.'
-                }
-              ]
-            };
+          }
         }
       } catch (error) {
         return {
